@@ -1,7 +1,7 @@
 import math
 import random
 import numpy as np
-from Env import Env
+from env import Env
 import torch
 import torch.nn as nn
 import torch.optim as optim
