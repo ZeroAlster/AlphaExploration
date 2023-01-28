@@ -1,107 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 import torch
 import numpy as np
 
 
-class CircleMaze:
-
-    def __init__(self):
-        self.ring_r = 0.15
-        self.stop_t = 0.05
-        self.s_angle = 30
-
-        self.mean_s0 = (
-            float(np.cos(np.pi * self.s_angle / 180)),
-            float(np.sin(np.pi * self.s_angle / 180))
-        )
-        self.mean_g = (
-            float(np.cos(np.pi * (360-self.s_angle) / 180)),
-            float(np.sin(np.pi * (360-self.s_angle) / 180))
-        )
-
-    def plot(self, ax=None):
-        if ax is None:
-            _, ax = plt.subplots(1, 1, figsize=(5, 4))
-        if ax is None:
-            _, ax = plt.subplots(1, 1, figsize=(5, 4))
-        rads = np.linspace(self.stop_t * 2 * np.pi, (1 - self.stop_t) * 2 * np.pi)
-        xs_i = (1 - self.ring_r) * np.cos(rads)
-        ys_i = (1 - self.ring_r) * np.sin(rads)
-        xs_o = (1 + self.ring_r) * np.cos(rads)
-        ys_o = (1 + self.ring_r) * np.sin(rads)
-        ax.plot(xs_i, ys_i, 'k', linewidth=3)
-        ax.plot(xs_o, ys_o, 'k', linewidth=3)
-        ax.plot([xs_i[0], xs_o[0]], [ys_i[0], ys_o[0]], 'k', linewidth=3)
-        ax.plot([xs_i[-1], xs_o[-1]], [ys_i[-1], ys_o[-1]], 'k', linewidth=3)
-        lim = 1.1 + self.ring_r
-        ax.set_xlim([-lim, lim])
-        ax.set_ylim([-lim, lim])
-
-    def sample_start(self):
-        STD = 0.1
-        return self.move(self.mean_s0, (STD * np.random.randn(), STD * np.random.randn()))
-
-    def sample_goal(self):
-        STD = 0.1
-        return self.move(self.mean_g, (STD * np.random.randn(), STD * np.random.randn()))
-
-    @staticmethod
-    def xy_to_rt(xy):
-        x = xy[0]
-        y = xy[1]
-        r = np.sqrt(x ** 2 + y ** 2)
-        t = np.arctan2(y, x) % (2 * np.pi)
-        return r, t
-
-    def move(self, coords, action):
-        xp, yp = coords
-        rp, tp = self.xy_to_rt(coords)
-
-        xy = (coords[0] + action[0], coords[1] + action[1])
-
-        r, t = self.xy_to_rt(xy)
-        t = np.clip(t % (2 * np.pi), (0.001 + self.stop_t) * (2 * np.pi), (1 - (0.001 + self.stop_t)) * (2 * np.pi))
-        x = np.cos(t) * r
-        y = np.sin(t) * r
-
-        if coords is not None:
-
-            if xp > 0:
-                if (y < 0) and (yp > 0):
-                    t = self.stop_t * 2 * np.pi
-                elif (y > 0) and (yp < 0):
-                    t = (1 - self.stop_t) * 2 * np.pi
-            x = np.cos(t) * r
-            y = np.sin(t) * r
-
-        n = 8
-        xyi = np.array([xp, yp]).astype(np.float32)
-        dxy = (np.array([x, y]).astype(np.float32) - xyi) / n
-        new_r = float(rp)
-        new_t = float(tp)
-
-        count = 0
-
-        def r_ok(r_):
-            return (1 - self.ring_r) <= r_ <= (1 + self.ring_r)
-
-        def t_ok(t_):
-            return (self.stop_t * (2 * np.pi)) <= (t_ % (2 * np.pi)) <= ((1 - self.stop_t) * (2 * np.pi))
-
-        while r_ok(new_r) and t_ok(new_t) and count < n:
-            xyi += dxy
-            new_r, new_t = self.xy_to_rt(xyi)
-            count += 1
-
-        r = np.clip(new_r, 1 - self.ring_r + 0.01, 1 + self.ring_r - 0.01)
-        t = np.clip(new_t % (2 * np.pi), (0.001 + self.stop_t) * (2 * np.pi), (1 - (0.001 + self.stop_t)) * (2 * np.pi))
-        x = np.cos(t) * r
-        y = np.sin(t) * r
-
-        return float(x), float(y)
-
+# hyperparameters for reward function
+######################################
+alpha=0.9           # extrinsic reward coefficient
+beta= 0.8           # visit prob coefficient
+######################################
 
 class Maze:
     def __init__(self, *segment_dicts, goal_squares=None, start_squares=None):
@@ -321,170 +228,7 @@ class Maze:
         dy *= r
         return cx + dx, cy + dy
 
-
-def make_crazy_maze(size, seed=None):
-    np.random.seed(seed)
-
-    deltas = [
-        [(-1, 0), 'right'],
-        [(1, 0), 'left'],
-        [(0, -1), 'up'],
-        [(0, 1), 'down'],
-    ]
-
-    empty_locs = []
-    for x in range(size):
-        for y in range(size):
-            empty_locs.append((x, y))
-
-    locs = [empty_locs.pop(0)]
-    dirs = [None]
-    anchors = [None]
-
-    while len(empty_locs) > 0:
-        still_empty = []
-        np.random.shuffle(empty_locs)
-        for empty_x, empty_y in empty_locs:
-            found_anchor = False
-            np.random.shuffle(deltas)
-            for (dx, dy), direction in deltas:
-                c = (empty_x + dx, empty_y + dy)
-                if c in locs:
-                    found_anchor = True
-                    locs.append((empty_x, empty_y))
-                    dirs.append(direction)
-                    anchors.append(c)
-                    break
-            if not found_anchor:
-                still_empty.append((empty_x, empty_y))
-        empty_locs = still_empty[:]
-
-    locs = [str(x) + ',' + str(y) for x, y in locs[1:]]
-    dirs = dirs[1:]
-    anchors = [str(x) + ',' + str(y) for x, y in anchors[1:]]
-    anchors = ['origin' if a == '0,0' else a for a in anchors]
-
-    segments = []
-    for loc, d, anchor in zip(locs, dirs, anchors):
-        segments.append(dict(name=loc, anchor=anchor, direction=d))
-
-    np.random.seed()
-    return Maze(*segments, goal_squares='{s},{s}'.format(s=size - 1))
-
-
-def make_experiment_maze(h, half_w, sz0):
-    if h < 2:
-        h = 2
-    if half_w < 3:
-        half_w = 3
-    w = 1 + (2*half_w)
-    # Create the starting row
-    segments = [{'anchor': 'origin', 'direction': 'right', 'name': '0,1'}]
-    for w_ in range(1, w-1):
-        segments.append({'anchor': '0,{}'.format(w_), 'direction': 'right', 'name': '0,{}'.format(w_+1)})
-
-    # Add each row to create H
-    for h_ in range(1, h):
-        segments.append({'anchor': '{},{}'.format(h_-1, w-1), 'direction': 'up', 'name': '{},{}'.format(h_, w-1)})
-
-        c = None if h_ == sz0 else 'down'
-        for w_ in range(w-2, -1, -1):
-            segments.append(
-                {'anchor': '{},{}'.format(h_, w_+1), 'direction': 'left', 'connect': c, 'name': '{},{}'.format(h_, w_)}
-            )
-
-    return Maze(*segments, goal_squares=['{},{}'.format(h-1, half_w+d) for d in [0]])
-
-
-def make_hallway_maze(corridor_length):
-    corridor_length = int(corridor_length)
-    assert corridor_length >= 1
-
-    segments = []
-    last = 'origin'
-    for x in range(1, corridor_length+1):
-        next_name = '0,{}'.format(x)
-        segments.append({'anchor': last, 'direction': 'right', 'name': next_name})
-        last = str(next_name)
-
-    return Maze(*segments, goal_squares=last)
-
-
-def make_u_maze(corridor_length):
-    corridor_length = int(corridor_length)
-    assert corridor_length >= 1
-
-    segments = []
-    last = 'origin'
-    for x in range(1, corridor_length + 1):
-        next_name = '0,{}'.format(x)
-        segments.append({'anchor': last, 'direction': 'right', 'name': next_name})
-        last = str(next_name)
-
-    assert last == '0,{}'.format(corridor_length)
-
-    up_size = 2
-
-    for x in range(1, up_size+1):
-        next_name = '{},{}'.format(x, corridor_length)
-        segments.append({'anchor': last, 'direction': 'up', 'name': next_name})
-        last = str(next_name)
-
-    assert last == '{},{}'.format(up_size, corridor_length)
-
-    for x in range(1, corridor_length + 1):
-        next_name = '{},{}'.format(up_size, corridor_length - x)
-        segments.append({'anchor': last, 'direction': 'left', 'name': next_name})
-        last = str(next_name)
-
-    assert last == '{},0'.format(up_size)
-
-    return Maze(*segments, goal_squares=last)
-
-
-
 mazes_dict = dict()
-
-mazes_dict['circle'] = {'maze': CircleMaze(), 'action_range': 0.25}
-
-segments_a = [
-    dict(name='A', anchor='origin', direction='down', times=4),
-    dict(name='B', anchor='A3', direction='right', times=4),
-    dict(name='C', anchor='B3', direction='up', times=4),
-    dict(name='D', anchor='A1', direction='right', times=2),
-    dict(name='E', anchor='D1', direction='up', times=2),
-]
-mazes_dict['square_a'] = {'maze': Maze(*segments_a, goal_squares=['c2', 'c3']), 'action_range': 0.95}
-
-segments_b = [
-    dict(name='A', anchor='origin', direction='down', times=4),
-    dict(name='B', anchor='A3', direction='right', times=4),
-    dict(name='C', anchor='B3', direction='up', times=4),
-    dict(name='D', anchor='B1', direction='up', times=4),
-]
-mazes_dict['square_b'] = {'maze': Maze(*segments_b, goal_squares=['c2', 'c3']), 'action_range': 0.95}
-
-segments_c = [
-    dict(name='A', anchor='origin', direction='down', times=4),
-    dict(name='B', anchor='A3', direction='right', times=2),
-    dict(name='C', anchor='B1', direction='up', times=4),
-    dict(name='D', anchor='C3', direction='right', times=2),
-    dict(name='E', anchor='D1', direction='down', times=4)
-]
-mazes_dict['square_c'] = {'maze': Maze(*segments_c, goal_squares=['e2', 'e3']), 'action_range': 0.95}
-
-segments_d = [
-    dict(name='TL', anchor='origin', direction='left', times=3),
-    dict(name='TLD', anchor='TL2', direction='down', times=3),
-    dict(name='TLR', anchor='TLD2', direction='right', times=2),
-    dict(name='TLU', anchor='TLR1', direction='up'),
-    dict(name='TR', anchor='origin', direction='right', times=3),
-    dict(name='TRD', anchor='TR2', direction='down', times=3),
-    dict(name='TRL', anchor='TRD2', direction='left', times=2),
-    dict(name='TRU', anchor='TRL1', direction='up'),
-    dict(name='TD', anchor='origin', direction='down', times=3),
-]
-mazes_dict['square_d'] = {'maze': Maze(*segments_d, goal_squares=['tlu', 'tlr1', 'tru', 'trl1']), 'action_range': 0.95}
 
 segments_crazy = [
     {'anchor': 'origin', 'direction': 'right', 'name': '1,0'},
@@ -589,38 +333,18 @@ segments_crazy = [
 ]
 mazes_dict['square_large'] = {'maze': Maze(*segments_crazy, goal_squares='9,9'), 'action_range': 0.95}
 
+
+
 class Env:
     def __init__(self, n=None, maze_type=None, use_antigoal=True, ddiff=False, ignore_reset_start=False):
-        self.n = n    ### what is n ???
+        self.n = n    ### what is n ???  answer: maximum frame to find the goal
 
         self._mazes = mazes_dict
+        self.max_dis_goal=None
+        self.max_dis_start=None
         self.maze_type = maze_type.lower()
 
         self._ignore_reset_start = bool(ignore_reset_start)
-
-        # Generate a crazy maze specified by its size and generation seed
-        if self.maze_type.startswith('crazy'):
-            _, size, seed = self.maze_type.split('_')
-            size = int(size)
-            seed = int(seed)
-            self._mazes[self.maze_type] = {'maze': make_crazy_maze(size, seed), 'action_range': 0.95}
-
-        # Generate an "experiment" maze specified by its height, half-width, and size of starting section
-        if self.maze_type.startswith('experiment'):
-            _, h, half_w, sz0 = self.maze_type.split('_')
-            h = int(h)
-            half_w = int(half_w)
-            sz0 = int(sz0)
-            self._mazes[self.maze_type] = {'maze': make_experiment_maze(h, half_w, sz0), 'action_range': 0.25}
-
-
-        if self.maze_type.startswith('corridor'):
-            corridor_length = int(self.maze_type.split('_')[1])
-            self._mazes[self.maze_type] = {'maze': make_hallway_maze(corridor_length), 'action_range': 0.95}
-
-        if self.maze_type.startswith('umaze'):
-            corridor_length = int(self.maze_type.split('_')[1])
-            self._mazes[self.maze_type] = {'maze': make_u_maze(corridor_length), 'action_range': 0.95}
 
         assert self.maze_type in self._mazes
 
@@ -632,6 +356,7 @@ class Env:
         self.dist_threshold = 0.15
 
         self.reset()
+        self.maximum_distance_to_start(self.state)
 
     @property
     def state_size(self):
@@ -654,13 +379,22 @@ class Env:
         if isinstance(x, (tuple, list)):
             return x[0], x[1]
         if isinstance(x, torch.Tensor):
-            x = x.data.numpy()
+            x = x.cpu().data.numpy()
         return float(x[0]), float(x[1])
 
     @staticmethod
     def dist(goal, outcome):                                   ## distance from goal
         # return torch.sum(torch.abs(goal - outcome))
         return torch.sqrt(torch.sum(torch.pow(goal - outcome, 2)))
+
+    def maximum_distance_to_goal(self,goal, outcome):
+        if self.max_dis_goal is None or self.max_dis_goal<torch.sqrt(torch.sum(torch.pow(goal - outcome, 2))):
+            self.max_dis_goal=torch.sqrt(torch.sum(torch.pow(goal - outcome, 2)))
+    
+    def maximum_distance_to_start(self,start):
+        x=torch.max(start[0]+0.5,9.5-start[0])
+        y=torch.max(start[1]+0.5,9.5-start[1])
+        self.max_dis_start=torch.sqrt(torch.sum(torch.pow(x, 2)+torch.pow(y, 2)))
 
     @property
     def maze(self):
@@ -682,32 +416,13 @@ class Env:
     def antigoal(self):
         return self._state['antigoal'].view(-1).detach()
 
-    @property
-    def reward(self):
-
-        # r_sparse = -torch.ones(1) + float(self.is_success)
-        # r_dense = -self.dist(self.goal, self.state)
-        # if self.use_antigoal:
-        #     r_dense += self.dist(self.antigoal, self.state)
-        # if not self.ddiff:
-        #     return r_sparse + torch.clamp(r_dense, -np.inf, 0.0)
-        # else:
-        #     r_dense_prev = -self.dist(self.goal, self._state['prev_state'])
-        #     if self.use_antigoal:
-        #         r_dense_prev += self.dist(self.antigoal, self._state['prev_state'])
-        #     r_dense -= r_dense_prev
-        #     return r_sparse + r_dense
-        #print(self.state)
-        #print(self.goal)
-
-        # if torch.equal(self.state,self.goal):
-        #   return 1
-        # else:
-        #   return 0
-
-        r=-self.dist(self.goal, self.state)
+    def reward(self,prob):
+        self.maximum_distance_to_goal(self.goal,self.state)
+        dis_to_start_ratio=self.dist(self.state,self._state['s0'])/self.max_dis_start
+        r_ext= 1-self.dist(self.goal, self.state)/self.max_dis_goal
+        r_int=beta*prob+(1-beta)*dis_to_start_ratio
+        r=alpha*r_ext+(1-alpha)*r_int
         return r
-        
         
 
     @property
