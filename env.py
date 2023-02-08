@@ -6,8 +6,8 @@ import numpy as np
 
 # hyperparameters for reward function
 ######################################
-alpha=0.9           # extrinsic reward coefficient
-beta= 0.8           # visit prob coefficient
+alpha=0.7          # distance to start coefficient
+beta= 1           # intrinsic coefficient
 ######################################
 
 class Maze:
@@ -337,7 +337,7 @@ mazes_dict['square_large'] = {'maze': Maze(*segments_crazy, goal_squares='9,9'),
 
 class Env:
     def __init__(self, n=None, maze_type=None, use_antigoal=True, ddiff=False, ignore_reset_start=False):
-        self.n = n    ### what is n ???  answer: maximum frame to find the goal
+        self.n = n    ### what is n ???  answer: maximum number of steps per episode
 
         self._mazes = mazes_dict
         self.max_dis_goal=None
@@ -388,8 +388,8 @@ class Env:
         return torch.sqrt(torch.sum(torch.pow(goal - outcome, 2)))
 
     def maximum_distance_to_goal(self,goal, outcome):
-        if self.max_dis_goal is None or self.max_dis_goal<torch.sqrt(torch.sum(torch.pow(goal - outcome, 2))):
-            self.max_dis_goal=torch.sqrt(torch.sum(torch.pow(goal - outcome, 2)))
+        if self.max_dis_goal is None or self.max_dis_goal< self.dist(goal,outcome):
+            self.max_dis_goal=self.dist(goal,outcome)
     
     def maximum_distance_to_start(self,start):
         x=torch.max(start[0]+0.5,9.5-start[0])
@@ -416,13 +416,25 @@ class Env:
     def antigoal(self):
         return self._state['antigoal'].view(-1).detach()
 
+    # def reward(self,prob):
+    #     # return maximum reward when the goal is reached
+    #     if self.is_success:
+    #         return 1
+    #     # compute the reward for other states
+    #     else:
+    #         self.maximum_distance_to_goal(self.goal,self.state)
+    #         dis_to_start_ratio=self.dist(self.state,self._state['s0'])/self.max_dis_start
+    #         r_ext= 1-(self.dist(self.goal, self.state)/self.max_dis_goal)
+    #         r_int=beta*(1-prob)+(1-beta)*dis_to_start_ratio
+    #         r=alpha*r_ext+(1-alpha)*r_int
+    #         return r
+
     def reward(self,prob):
-        self.maximum_distance_to_goal(self.goal,self.state)
-        dis_to_start_ratio=self.dist(self.state,self._state['s0'])/self.max_dis_start
-        r_ext= 1-self.dist(self.goal, self.state)/self.max_dis_goal
-        r_int=beta*prob+(1-beta)*dis_to_start_ratio
-        r=alpha*r_ext+(1-alpha)*r_int
+        r_ext=(alpha)*self.dist(self.state,self._state['s0'])-(1-alpha)*self.dist(self.goal,self.state)
+        r_int=torch.sqrt(1/prob)
+        r=r_ext+beta*r_int
         return r
+
         
 
     @property

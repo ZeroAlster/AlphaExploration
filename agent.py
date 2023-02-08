@@ -6,7 +6,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Normal
 import random
-import sys
 
 
 
@@ -27,7 +26,7 @@ class ReplayBuffer:
         self.buffer = []
         self.position = 0
     
-    def push(self,episode_rollout,reward):
+    def push(self,episode_rollout):
         
         for sample in episode_rollout:
             if len(self.buffer) < self.capacity:
@@ -37,7 +36,7 @@ class ReplayBuffer:
             action=sample[1]
             if isinstance(sample[1][0], torch.Tensor):
                 action=(sample[1][0].cpu(),sample[1][1].cpu())
-            self.buffer[self.position] = (sample[0].cpu(), action, reward.cpu(), sample[2].cpu(), sample[3])
+            self.buffer[self.position] = (sample[0].cpu(), action, sample[4].cpu(), sample[2].cpu(), sample[3])
             self.position = (self.position + 1) % self.capacity
     
     def sample(self, batch_size):
@@ -55,15 +54,17 @@ class ValueNetwork(nn.Module):
         
         self.linear1 = nn.Linear(state_dim, hidden_dim)
         self.linear2 = nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = nn.Linear(hidden_dim, 1)
+        self.linear3 = nn.Linear(hidden_dim, hidden_dim)
+        self.linear4 = nn.Linear(hidden_dim, 1)
         
-        self.linear3.weight.data.uniform_(-init_w, init_w)
-        self.linear3.bias.data.uniform_(-init_w, init_w)
+        self.linear4.weight.data.uniform_(-init_w, init_w)
+        self.linear4.bias.data.uniform_(-init_w, init_w)
         
     def forward(self, state):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
-        x = self.linear3(x)
+        x = F.relu(self.linear3(x))
+        x = self.linear4(x)
         return x
         
         
@@ -73,16 +74,18 @@ class SoftQNetwork(nn.Module):
         
         self.linear1 = nn.Linear(num_inputs + num_actions, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
-        self.linear3 = nn.Linear(hidden_size, 1)
+        self.linear3 = nn.Linear(hidden_size, hidden_size)
+        self.linear4 = nn.Linear(hidden_size, 1)
         
-        self.linear3.weight.data.uniform_(-init_w, init_w)
-        self.linear3.bias.data.uniform_(-init_w, init_w)
+        self.linear4.weight.data.uniform_(-init_w, init_w)
+        self.linear4.bias.data.uniform_(-init_w, init_w)
         
     def forward(self, state, action):
         x = torch.cat([state, action], 1)
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
-        x = self.linear3(x)
+        x = F.relu(self.linear3(x))
+        x = self.linear4(x)
         return x
         
         
@@ -96,6 +99,7 @@ class PolicyNetwork(nn.Module):
         
         self.linear1 = nn.Linear(num_inputs, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
+        self.linear3 = nn.Linear(hidden_size, hidden_size)
         
         self.mean_linear = nn.Linear(hidden_size, num_actions)
         self.mean_linear.weight.data.uniform_(-init_w, init_w)
@@ -109,6 +113,7 @@ class PolicyNetwork(nn.Module):
         
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
+        x = F.relu(self.linear3(x))
         
         mean    = self.mean_linear(x)
         log_std = self.log_std_linear(x)
@@ -154,17 +159,23 @@ class Agent():
         self.value_criterion=nn.MSELoss()
         self.soft_q_criterion1 = nn.MSELoss()
         self.soft_q_criterion2 = nn.MSELoss()
-        self.value_lr  = 3e-4
-        self.soft_q_lr = 3e-4
-        self.policy_lr = 3e-4
+        self.value_lr  = 8e-4
+        self.soft_q_lr = 8e-4
+        self.policy_lr = 8e-4
         self.value_optimizer  = optim.Adam(self.value_network.parameters(), lr=self.value_lr)
         self.soft_q_optimizer1 = optim.Adam(self.soft_network1.parameters(), lr=self.soft_q_lr)
         self.soft_q_optimizer2 = optim.Adam(self.soft_network2.parameters(), lr=self.soft_q_lr)
         self.policy_optimizer = optim.Adam(self.policy_network.parameters(), lr=self.policy_lr)
 
-    def update(self,batch_size,gamma=0.99,soft_tau=1e-2,):
+    def update(self,batch_size,env,gamma=0.99,soft_tau=1e-2):
         
         state, action, reward, next_state, done = self.replay_buffer.sample(batch_size)
+
+        # recalculate the reward for off-policy learning
+        new_reward=[]
+        for s in next_state:
+            new_reward.append(env.reward(self.density_model.prob(s)))
+        reward=new_reward
 
         state      = torch.FloatTensor(state).to(device)
         next_state = torch.FloatTensor(next_state).to(device)
