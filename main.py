@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from IPython.display import display
 import numpy as np
+import math
 
 #hyper params
 ######################################
@@ -20,7 +21,7 @@ max_frames  = 10000000
 max_steps   = 50
 batch_size  = 128
 action_range=0.95
-number_of_updates=10
+number_of_updates=20
 ######################################
 
 
@@ -35,13 +36,14 @@ def plot(agent,frame_idx, rewards,destinations,env):
     plt.subplot()
     plt.title('frame %s. reward: %s' % (frame_idx, rewards[-1]))
     plt.plot(rewards)
-    plt.savefig("figures/10M frames/rewards_off.png")
+    plt.savefig("figures/SAC with local optimum/threshold_0.3/rewards.png")
     
     # plot coordination of terminal states 
     outliers=0
     _, ax = plt.subplots(1, 1, figsize=(5, 4))
     for x, y in env.maze._walls:
         ax.plot(x, y, 'k-')
+    
     for sample in destinations:
         
         if sample[0]>9.5 or sample[1]>9.5:
@@ -52,11 +54,11 @@ def plot(agent,frame_idx, rewards,destinations,env):
             sample=[max(sample[0],-0.5),max(sample[1],-0.5)]
 
         ax.plot(sample[0],sample[1],marker='o',markersize=2,color="red")
-    plt.savefig("figures/10M frames/destinations_off.png")
+    plt.savefig("figures/SAC with local optimum/threshold_0.3/destinations.png")
     plt.close("all")
 
     # record visitation counts
-    np.save("figures/10M frames/visits_off",agent.density_model.visits)
+    np.save("figures/SAC with local optimum/threshold_0.3/visits",agent.density_model.visits)
 
     return outliers
 
@@ -78,6 +80,7 @@ def train(agent,env):
         if frame_idx % 100000==0:
             print("number of frames: "+str(frame_idx))
             print("number of outliers: "+str(out_of_bound))
+            print("number of terminals:"+str(len(destinations)))
             print("*"*20)
         
         for _ in range(max_steps):
@@ -92,12 +95,14 @@ def train(agent,env):
             terminal_reward = reward
             
             if env.is_success:
-                print("we found the goal!")
+                print("we found the goal after "+str(frame_idx)+"  frames!")
                 out_of_bound=plot(agent,frame_idx, rewards,destinations,env)
                 break
 
-        # add episode samples to the replay buffer
+        # add episode samples to the replay buffer, update epsilon, and set local optimum for reward function
         agent.replay_buffer.push(episode_rollout)
+        agent.epsilon_update()
+        env.set_local_optimum(agent.density_model.prob(terminal_state),terminal_state,agent.density_model.prob(env.local_optimum))
         #print("eipsode is complete!")
 
         # update the network
@@ -138,7 +143,7 @@ def main():
         pass
     
     # define density model and replay_buffer
-    density_model=SEstimator(1,10,10,[-0.5,-0.5])
+    density_model=SEstimator(2,10,10,[-0.5,-0.5])
     replay_buffer = ReplayBuffer(replay_buffer_size)
 
     # instantiate the agent
@@ -150,8 +155,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # visits=np.load("figures/10M frames/visits_on.npy")
+    # visits=np.load("figures/SAC with local optimum/threshold_0.1/visits.npy")
     # for i in range(visits.shape[0]):
-    #     for j in range(visits.shape[1]):
-    #         print(visits[i][j],end="      ")
-    #     print()
+    #     print(visits[i])
+    #     print("*"*20)

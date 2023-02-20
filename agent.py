@@ -15,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #hyper params
 ###################################### 
 epsilon = 1
-epsilon_decay = 0.995
+epsilon_decay = 0.9999992
 min_epsilon = 0.001
 ###################################### 
 
@@ -248,8 +248,12 @@ class Agent():
             self.density_model.increment(env.state)
             reward = env.reward(self.density_model.prob(env.state))
             done=env.is_done
+
+        return action,next_state,reward,done
+    
+    def epsilon_update(self):
+        global epsilon
         
         if epsilon > 0.001:
             epsilon*=epsilon_decay
-
-        return action,next_state,reward,done
+        

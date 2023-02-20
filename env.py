@@ -342,6 +342,9 @@ class Env:
         self._mazes = mazes_dict
         self.max_dis_goal=None
         self.max_dis_start=None
+        self.local_optimum=None
+        self.local_optimum_thresh=0.3
+        self.local_optimum_range=0.1
         self.maze_type = maze_type.lower()
 
         self._ignore_reset_start = bool(ignore_reset_start)
@@ -356,7 +359,9 @@ class Env:
         self.dist_threshold = 0.15
 
         self.reset()
-        self.maximum_distance_to_start(self.state)
+        #self.maximum_distance_to_start(self.state)
+        self.set_local_optimum()
+        print("local optimum: "+str(self.local_optimum))
 
     @property
     def state_size(self):
@@ -416,6 +421,8 @@ class Env:
     def antigoal(self):
         return self._state['antigoal'].view(-1).detach()
 
+    
+    # reward function with distance ratio
     # def reward(self,prob):
     #     # return maximum reward when the goal is reached
     #     if self.is_success:
@@ -429,12 +436,44 @@ class Env:
     #         r=alpha*r_ext+(1-alpha)*r_int
     #         return r
 
-    def reward(self,prob):
-        r_ext=(alpha)*self.dist(self.state,self._state['s0'])-(1-alpha)*self.dist(self.goal,self.state)
-        r_int=torch.sqrt(1/prob)
-        r=r_ext+beta*r_int
-        return r
+    # normal reward function with bonus
+    # def reward(self,prob):
+    #     r_ext=(alpha)*self.dist(self.state,self._state['s0'])-(1-alpha)*self.dist(self.goal,self.state)
+    #     r_int=np.sqrt(1/prob)
+    #     r=r_ext+beta*r_int
+    #     return r
 
+    # sparse reward function
+    # def reward(self,prob):
+    #     if self.is_success:
+    #         return torch.tensor(1)
+    #     else:
+    #         return torch.tensor(0)
+        
+    # dense reward function
+    # def reward(self,prob):
+    #     return -self.dist(self.state,self.goal)
+
+    # reward function with local optimum
+    def reward(self,prob):
+        if self.is_success:
+            return torch.tensor(1)
+        else:
+            return self.dist(self.state,self.local_optimum)-self.dist(self.state,self.goal)
+
+    # set new local optimum
+    def set_local_optimum(self,prob=None,terminal=None,old_prob=None):
+        current=self.local_optimum
+        if terminal is None:
+            self.local_optimum=self._state['s0']
+        else:
+            if prob>self.local_optimum_thresh and self.local_optimum_thresh-old_prob>self.local_optimum_range:
+                self.local_optimum=terminal
+                print("it changed!")
+                print("prob: "+str(prob))
+                print("old prob: "+str(old_prob))
+                print("local optimum: "+str(self.local_optimum))
+                print("*"*20)
         
 
     @property
