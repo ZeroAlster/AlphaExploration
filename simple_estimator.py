@@ -8,7 +8,7 @@ class SEstimator:
     def __init__(self, cell_side,env_xside,env_yside,env_start):
         self.cell_side = cell_side
         self.env_start=env_start
-        self.visits=np.zeros((math.ceil(env_xside/cell_side),math.ceil(env_yside/cell_side)))+0.001
+        self.visits=np.zeros((math.ceil(env_xside/cell_side),math.ceil(env_yside/cell_side)))+minimum_prob
     
     def prob(self,coordination):
         cell_x=math.floor((coordination[0]-self.env_start[0])/self.cell_side)
