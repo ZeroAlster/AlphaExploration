@@ -9,6 +9,8 @@ from agent import CustomCallback
 from stable_baselines3 import SAC
 import pickle
 import random
+import statistics
+
 
 
 #hyper params
@@ -19,14 +21,28 @@ learning_rate=0.0006
 max_steps   = 50
 batch_size  = 128
 seed=random.randint(0,100)
+num_agents=5
+checkpoints_interval=10000
 ######################################
 
 
-def plot(address,destinations=None,env=None,success_rates=False):
+def plot(address,destinations=None,env=None,success_rates=None):
     
     # plot success rates
     if success_rates is not None:
-        pass
+        std=np.zeros((1,len(success_rates[0])))
+        mean=np.zeros((1,len(success_rates[0])))
+        checkpoints=np.zeros((1,len(success_rates[0])))
+        for i in range(len(success_rates[0])):
+            values=[success_rates[0][i],success_rates[1][i],success_rates[2][i],success_rates[3][i],success_rates[4][i]]
+            mean[0][i]=sum(values)/len(values)
+            std[0][i]=statistics.pstdev(values)
+            checkpoints[0][i]=(checkpoints_interval/max_steps)*(i+1)
+        
+        plt.plot(checkpoints[0,:],mean[0,:], 'k-',color="blue")
+        plt.fill_between(checkpoints[0,:], (mean-std)[0,:], (mean+std)[0,:])
+        plt.savefig(address+"/success_rates.png")
+
     
     
     if destinations is not None:
@@ -35,9 +51,11 @@ def plot(address,destinations=None,env=None,success_rates=False):
         for x, y in env.maze._walls:
             ax.plot(x, y, 'k-')
         
-        for sample in destinations:
+
+        for destination in destinations:
             
-            print(type(sample))
+            sample=destination[0]
+            
             if sample[0]>9.5 or sample[1]>9.5:
                 sample=[min(sample[0],9.5),min(sample[1],9.5)]
             if sample[0]<-0.5 or sample[1]<-0.5:
@@ -56,13 +74,14 @@ def plot(address,destinations=None,env=None,success_rates=False):
 def train(agent,env,address):
     
     # train and save the model
-    agent.learn(max_frames,callback=CustomCallback(address=address))
-    agent.save(address+"/sac_agent")
+    # agent.learn(max_frames,callback=CustomCallback(address=address))
+    # agent.save(address+"/sac_agent")
 
     # plot reached states at the end of each episode
     destinations=[]
     with open(address+"/locations", 'rb') as fp:
         destinations = pickle.load(fp)
+    
     plot(address,destinations=destinations,env=env)
 
 
@@ -83,5 +102,18 @@ def main(address):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-a','--address',required=True)
+    parser.add_argument('-t','--task',required=True)
     args = parser.parse_args()
-    main(args.address)
+    
+    if args.task=="train":
+        main(args.address)
+    elif args.task=="plot":
+        # plot success rates of all 5 agents
+        success_rates=[]
+        for i in range(num_agents):
+            with open(args.address+"/agent "+str(i+1)+"/success_rates", 'rb') as fp:
+                success_rates.append(pickle.load(fp))
+        plot(args.address,success_rates=success_rates)
+
+    else:
+        pass

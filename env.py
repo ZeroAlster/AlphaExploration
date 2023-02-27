@@ -446,15 +446,15 @@ class Env(gym.Env):
     #     return r
 
     # sparse reward function
-    def reward(self,prob):
-        if self.is_success:
-            return torch.tensor(1)
-        else:
-            return torch.tensor(0)
+    # def reward(self,prob):
+    #     if self.is_success:
+    #         return torch.tensor(1)
+    #     else:
+    #         return torch.tensor(0)
         
     # dense reward function
-    # def reward(self,prob):
-    #     return -self.dist(self.state,self.goal)
+    def reward(self,prob):
+        return -self.dist(self.state,self.goal)
 
     # reward function with local optimum
     # def reward(self,prob):
