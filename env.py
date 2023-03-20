@@ -7,13 +7,6 @@ from gym import spaces
 from simple_estimator import SEstimator
 
 
-
-# hyperparameters for reward function
-######################################
-alpha=0.7          # distance to start coefficient
-beta= 1           # intrinsic coefficient
-######################################
-
 class Maze:
     def __init__(self, *segment_dicts, goal_squares=None, start_squares=None):
         self._segments = {'origin': {'loc': (0.0, 0.0), 'connect': set()}}
@@ -345,6 +338,7 @@ class Env(gym.Env):
 
         # maze parameters
         self.n=n
+        self.goal_achievement=0
         self._mazes = mazes_dict
         self.maze_type = maze_type.lower()
         assert self.maze_type in self._mazes
@@ -353,21 +347,9 @@ class Env(gym.Env):
 
         # gym parameters
         self.action_space = spaces.Box(low=-0.95, high=0.95,shape=(2,))
-        self.observation_space = spaces.Box(low=-0.5, high=9.5,shape=(2,), dtype=np.float32)
-        self.density_estimator=SEstimator(2,10,10,[-0.5,-0.5])
-        
-        
-        # reward function parameters
-        self.max_dis_goal=None
-        self.max_dis_start=None
-        self.local_optimum=None
-        self.local_optimum_thresh=0.3
-        self.local_optimum_range=0.1
+        self.observation_space = spaces.Box(low=-0.5, high=9.5,shape=(2,), dtype=np.float32)        
         
         self.reset()
-        #self.maximum_distance_to_start(self.state)
-        #self.set_local_optimum()
-        #print("local optimum: "+str(self.local_optimum))
 
     @property
     def state_size(self):
@@ -398,15 +380,6 @@ class Env(gym.Env):
         # return torch.sum(torch.abs(goal - outcome))
         return torch.sqrt(torch.sum(torch.pow(goal - outcome, 2)))
 
-    def maximum_distance_to_goal(self,goal, outcome):
-        if self.max_dis_goal is None or self.max_dis_goal< self.dist(goal,outcome):
-            self.max_dis_goal=self.dist(goal,outcome)
-    
-    def maximum_distance_to_start(self,start):
-        x=torch.max(start[0]+0.5,9.5-start[0])
-        y=torch.max(start[1]+0.5,9.5-start[1])
-        self.max_dis_start=torch.sqrt(torch.sum(torch.pow(x, 2)+torch.pow(y, 2)))
-
     @property
     def maze(self):
         return self._mazes[self.maze_type]['maze']
@@ -424,59 +397,22 @@ class Env(gym.Env):
         return self._state['goal'].view(-1).detach()
 
     
-    # reward function with distance ratio
-    # def reward(self,prob):
-    #     # return maximum reward when the goal is reached
-    #     if self.is_success:
-    #         return 1
-    #     # compute the reward for other states
-    #     else:
-    #         self.maximum_distance_to_goal(self.goal,self.state)
-    #         dis_to_start_ratio=self.dist(self.state,self._state['s0'])/self.max_dis_start
-    #         r_ext= 1-(self.dist(self.goal, self.state)/self.max_dis_goal)
-    #         r_int=beta*(1-prob)+(1-beta)*dis_to_start_ratio
-    #         r=alpha*r_ext+(1-alpha)*r_int
-    #         return r
-
-    # normal reward function with bonus
-    # def reward(self,prob):
-    #     r_ext=(alpha)*self.dist(self.state,self._state['s0'])-(1-alpha)*self.dist(self.goal,self.state)
-    #     r_int=np.sqrt(1/prob)
-    #     r=r_ext+beta*r_int
-    #     return r
-
     # sparse reward function
-    # def reward(self,prob):
+    # def reward(self):
     #     if self.is_success:
     #         return torch.tensor(1)
     #     else:
     #         return torch.tensor(0)
         
     # dense reward function
-    def reward(self,prob):
-        return -self.dist(self.state,self.goal)
-
-    # reward function with local optimum
-    # def reward(self,prob):
-    #     if self.is_success:
-    #         return torch.tensor(1)
-    #     else:
-    #         return self.dist(self.state,self.local_optimum)-self.dist(self.state,self.goal)
-
-    # set new local optimum
-    # def set_local_optimum(self,prob=None,terminal=None,old_prob=None):
-    #     current=self.local_optimum
-    #     if terminal is None:
-    #         self.local_optimum=self._state['s0']
-    #     else:
-    #         if prob>self.local_optimum_thresh and self.local_optimum_thresh-old_prob>self.local_optimum_range:
-    #             self.local_optimum=terminal
-    #             print("it changed!")
-    #             print("prob: "+str(prob))
-    #             print("old prob: "+str(old_prob))
-    #             print("local optimum: "+str(self.local_optimum))
-    #             print("*"*20)
-        
+    def reward(self):
+        if self.is_done:
+            if self.is_success:
+                return torch.tensor(1)
+            else:
+                return -self.dist(self.state,self.goal)
+        else:
+            return torch.tensor(0)
 
     @property
     def achieved(self):
@@ -509,8 +445,10 @@ class Env(gym.Env):
             'done': False,
         }
 
-        # gym requirement
-        return self._state['state'].numpy()
+        # gym requirement: we need to use goal together with current state as input to the agent
+        obs=torch.cat([self.state,self.goal],dim=0)
+
+        return obs.numpy()
 
     def step(self, action):
         try:
@@ -527,11 +465,16 @@ class Env(gym.Env):
         self._state['n'] += 1
         self._state['done'] = (self._state['n'] >= self.n) or self.is_success
 
-        # reward and density
-        self.density_estimator.increment(next_state)
-        r=float(self.reward(self.density_estimator.prob(next_state)))
-        # gym requirement
-        return self._state['state'].numpy(),r,bool(self._state['done']),{}
+        # reward
+        r=float(self.reward())
+
+        # gym requirement: we need to use goal together with current state as input to the agent
+        nx_obs=torch.cat([self.state,self.goal],dim=0)
+
+        if self.is_success:
+            self.goal_achievement+=1
+        
+        return nx_obs.numpy(),r,bool(self._state['done']),{}
     
 
     # gym requirement

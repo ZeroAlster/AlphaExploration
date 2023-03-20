@@ -2,13 +2,13 @@ import numpy as np
 import math
 
 
-minimum_prob=0.001
+minimum_visit=0.001
 
 class SEstimator:
     def __init__(self, cell_side,env_xside,env_yside,env_start):
         self.cell_side = cell_side
         self.env_start=env_start
-        self.visits=np.zeros((math.ceil(env_xside/cell_side),math.ceil(env_yside/cell_side)))+minimum_prob
+        self.visits=np.zeros((math.ceil(env_xside/cell_side),math.ceil(env_yside/cell_side)))+minimum_visit
     
     def prob(self,coordination):
         cell_x=math.floor((coordination[0]-self.env_start[0])/self.cell_side)
@@ -32,4 +32,6 @@ class SEstimator:
         cell_y=max(cell_y,0)
 
         self.visits[cell_x][cell_y]+=1
+
+        
 
