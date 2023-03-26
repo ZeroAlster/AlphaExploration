@@ -400,7 +400,7 @@ class Env(gym.Env):
     # sparse reward function
     # def reward(self):
     #     if self.is_success:
-    #         return torch.tensor(1)
+    #         return torch.tensor(10)
     #     else:
     #         return torch.tensor(0)
         
@@ -408,7 +408,7 @@ class Env(gym.Env):
     def reward(self):
         if self.is_done:
             if self.is_success:
-                return torch.tensor(1)
+                return torch.tensor(15)
             else:
                 return -self.dist(self.state,self.goal)
         else:

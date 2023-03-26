@@ -29,7 +29,7 @@ warm_up=20000
 stored_points_for_cell=10
 stored_trajectories_length=40
 alpha=0.5
-alpha_decay=0.9999994
+alpha_decay=0.9999997
 ######################################
 
 
@@ -122,7 +122,6 @@ def point_to_cell(coordination,density_estimator):
 
 
 def start_from_memory(agent,env,state):
-    suucessful_trajectory=[]
     episode_memory=[]
     done=False
     trajectory=[]
@@ -143,13 +142,12 @@ def start_from_memory(agent,env,state):
     for action in path:
         next_state, reward, done, _ = env.step(action)
         episode_memory.append([state, action, reward, next_state, np.float(env.is_success)])
-        suucessful_trajectory.append([state, action, reward, next_state, np.float(env.is_success)])
         state=next_state
         agent.density_estimator.increment(state)
         trajectory.append(action)
     
     
-    return trajectory,state,done,suucessful_trajectory,episode_memory
+    return trajectory,state,done,episode_memory
     
 
 
@@ -168,19 +166,32 @@ def evaluation(agent):
     return success/evaluation_attempts
 
 
+
+# need to be analyzed again.
 def save_to_memory(agent,episode_memory,short=False):
-    i=0
+
     episode_reward=episode_memory[-1][2]
     episode_next_state=episode_memory[-1][3]
     episode_done=episode_memory[-1][4]
 
-    for entry in reversed(episode_memory):
-        reward=episode_reward*math.pow(agent.gamma,i) 
-        if not short:
+    # this is a successful trajectory: MC update
+    if episode_done:
+        i=0
+        for entry in reversed(episode_memory):
+            reward=episode_reward*math.pow(agent.gamma,i)
+            if not short:
+                agent.memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
+            else:
+                agent.short_memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
+            i+=1    
+    
+    # this is an unsuccessful trajectory: truncated MC update
+    else:
+        i=0
+        for entry in reversed(episode_memory):
+            reward=episode_reward*math.pow(agent.gamma,i)
             agent.memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
-        else:
-            agent.short_memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
-        i+=1
+            i+=1
 
 
 def train(agent,env,address):
@@ -235,14 +246,11 @@ def train(agent,env,address):
         
         # check if agent wants to use its memory
         if random.uniform(0, 1)<alpha:
-            trajectory,state,done,successful_trajectory,episode_memory=start_from_memory(agent,env,state)
+            trajectory,state,done,episode_memory=start_from_memory(agent,env,state)
         else:
             done=False
             trajectory=[]
             episode_memory=[]
-            # saving successful trajectories to the short memeory
-            successful_trajectory=[]
-            
 
         terminal=state
         
@@ -251,13 +259,12 @@ def train(agent,env,address):
             for action in option:
                 next_state, reward, done, _ = env.step(action)
                 episode_memory.append([state, action, reward, next_state, np.float(env.is_success)])
-                successful_trajectory.append([state, action, reward, next_state, np.float(env.is_success)])
                 state=next_state
                 agent.density_estimator.increment(state)
                 terminal=state
                 
                 # storing trajectories
-                if len(trajectory)<stored_trajectories_length and  frame > warm_up:
+                if len(trajectory)<stored_trajectories_length:
                     trajectory.append(action)
                     cell_x,cell_y=point_to_cell(state,agent.density_estimator)
                     if len(agent.path_array[cell_x][cell_y]) < stored_points_for_cell:
@@ -271,7 +278,7 @@ def train(agent,env,address):
                 
                 # adding successful trajectory to the short memory
                 if env.is_success:
-                    save_to_memory(agent,successful_trajectory,short=True)
+                    save_to_memory(agent,episode_memory,short=True)
                 
                 # check if episode is done
                 if done:
@@ -283,6 +290,10 @@ def train(agent,env,address):
 
         # recording terminal states
         destinations.append(terminal)
+
+        # update number of updates from short memory
+        if frame>int(2e6):
+            agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
         # update after each episode when the warmup is done
         for i in range(num_updates):
@@ -297,6 +308,10 @@ def train(agent,env,address):
     with open(address+"/successful_trajectories", "wb") as fp:
             pickle.dump(agent.short_memory.buffer, fp)
     np.save(address+"/visits",agent.density_estimator.visits)
+
+    # save agent nn models
+    torch.save(agent.actor.state_dict(), address + '/actor.pth')
+    torch.save(agent.critic.state_dict(), address + '/critic.pth')
 
 
     # print number of times that goal is chieved

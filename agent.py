@@ -13,22 +13,21 @@ import math
 
 #hyper params
 ######################################
-replay_buffer_size = 1e5
+replay_buffer_size = 5e5
 hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=1e-3
-epsilon_decay=0.9999995
+actor_learning_rate=2e-4
+critic_learning_rate=4e-4
+epsilon_decay=0.9999997
 epsilon=1
-noise_scale=0.1
+noise_scale=0.2
 RRT_budget=35
 max_steps   = 50
 minimum_exploration=0.01
-rrt_prob=0.6
-short_memory_size=int(1e3)
-short_memory_updates=5
+rrt_prob=0.9
+short_memory_size=int(5e4)
 tau=1e-2
 gamma=0.98
-rrt_min_visit=100
+rrt_min_visit=1000
 ######################################
 
 
@@ -48,10 +47,18 @@ class Node:
 class Memory:
     def __init__(self, max_size):
         self.buffer = deque(maxlen=max_size)
+        self.hit=0
+        self.shuffle_interval=max_size/2
     
     def push(self, state, action, reward, next_state, done,step):
         experience = (state, action, np.array([reward]), next_state, np.array([done]),np.array([step]))
         self.buffer.append(experience)
+        self.hit+=1
+        if self.hit % self.shuffle_interval==0:
+            random.shuffle(self.buffer)    
+
+
+        # shuffle the buffer
 
     def sample(self, batch_size):
         state_batch = []
@@ -102,7 +109,7 @@ class Critic(nn.Module):
 
 
 class Actor(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size,action_range,init_w=3e-3):
+    def __init__(self, input_size, hidden_size, output_size,action_range):
         super(Actor, self).__init__()
         self.linear1 = nn.Linear(input_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
@@ -133,6 +140,7 @@ class Agent():
         self.epsilon=epsilon
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
+        self.short_memory_updates=0
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -234,7 +242,7 @@ class Agent():
     
     def update(self, batch_size,update_number):
         
-        if update_number<short_memory_updates and len(self.short_memory)>0:
+        if update_number<self.short_memory_updates and len(self.short_memory)>0:
             states, actions, rewards, next_states, done,steps = self.short_memory.sample(min(batch_size,len(self.short_memory)))
         else:
             states, actions, rewards, next_states, done,steps = self.memory.sample(batch_size)
@@ -245,7 +253,6 @@ class Agent():
         next_states = torch.FloatTensor(np.array(next_states))
         done=torch.FloatTensor(np.array([1-i for i in done]))
         steps=torch.FloatTensor(np.array(steps))
-
         
         # Critic loss        
         Qvals = self.critic.forward(states, actions)
