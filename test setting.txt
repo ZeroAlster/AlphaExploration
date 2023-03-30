@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # agent1 settings: node4
-=======
-# agent1 settings: with sparse reward - node4 was the best setting
->>>>>>> 1969109aafd9c92f930a6656b669a7ed5799779c
 ######################################
 max_frames  = 8e6
 max_steps   = 50
