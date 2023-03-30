@@ -15,11 +15,11 @@ import math
 ######################################
 replay_buffer_size = 5e5
 hidden_size=128
-actor_learning_rate=2e-4
-critic_learning_rate=4e-4
+actor_learning_rate=1e-4
+critic_learning_rate=6e-4
 epsilon_decay=0.9999997
 epsilon=1
-noise_scale=0.2
+noise_scale=0.3
 RRT_budget=35
 max_steps   = 50
 minimum_exploration=0.01
@@ -141,6 +141,7 @@ class Agent():
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
         self.short_memory_updates=0
+        self.noise_scale=noise_scale
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -225,7 +226,7 @@ class Agent():
             
             # disable during evaluation
             if not evaluation:
-                noise=np.random.normal(0, noise_scale, size=self.num_actions).clip(-self.action_range, self.action_range)
+                noise=np.random.normal(0, self.noise_scale, size=self.num_actions).clip(-self.action_range, self.action_range)
                 action=np.clip(action+noise,-self.action_range, self.action_range)
             
             option=[action]

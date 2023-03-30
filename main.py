@@ -22,7 +22,7 @@ max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
 num_updates=10
-num_agents=2
+num_agents=6
 checkpoints_interval=10000
 evaluation_attempts=5
 warm_up=20000
@@ -30,6 +30,7 @@ stored_points_for_cell=10
 stored_trajectories_length=40
 alpha=0.5
 alpha_decay=0.9999997
+seed=80
 ######################################
 
 
@@ -38,10 +39,10 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # set random seeds
-torch.manual_seed(10)
-torch.cuda.manual_seed(10)
-random.seed(10)
-np.random.seed(10)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+random.seed(seed)
+np.random.seed(seed)
 
 
 def plot(address,locations,success_rates):
@@ -52,7 +53,7 @@ def plot(address,locations,success_rates):
     horizon=np.zeros((1,len(success_rates[0])))
     for i in range(len(success_rates[0])):
         values=[]
-        for j in range(num_agents):
+        for j in range(num_agents-1):
             values.append(success_rates[j][i])
         mean[0][i]=sum(values)/len(values)
         std[0][i]=statistics.pstdev(values)
@@ -88,7 +89,7 @@ def plot(address,locations,success_rates):
                 #sample=[max(sample[0],-0.5),max(sample[1],-0.5)]
                 continue
 
-            if len(sampler)<2:
+            if len(sampler)<10:
                 sampler.append(sample)
             else:
                 sample=random.choice(sampler)
@@ -295,6 +296,12 @@ def train(agent,env,address):
         if frame>int(2e6):
             agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
+        # update the noise scale
+        if frame>=int(5e6):
+            agent.noise_scale=0.2
+        if frame>=int(7e6):
+            agent.noise_scale=0.1
+
         # update after each episode when the warmup is done
         for i in range(num_updates):
             agent.update(batch_size,i)
@@ -352,10 +359,14 @@ if __name__ == '__main__':
         locations=[]
         
         for i in range(num_agents):
+            if i==3:
+                continue
             with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
                 success_rates.append(pickle.load(fp))
         
         for i in range(num_agents):
+            if i==3:
+                continue
             with open(args.address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
                 destinations=pickle.load(fp)
             locations.append([destinations,args.address+"/agent"+str(i+1)])

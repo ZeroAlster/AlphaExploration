@@ -1,10 +1,10 @@
-# agent1 settings: with sparse reward - node4
+# agent1 settings: node4
 ######################################
 max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
 num_updates=10
-num_agents=2
+num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=5
 warm_up=20000
@@ -12,6 +12,7 @@ stored_points_for_cell=10
 stored_trajectories_length=40
 alpha=0.5
 alpha_decay=0.9999997
+seed=100
 
 replay_buffer_size = 5e5
 hidden_size=128
@@ -19,7 +20,7 @@ actor_learning_rate=1e-4
 critic_learning_rate=6e-4
 epsilon_decay=0.9999997
 epsilon=1
-noise_scale=0.2
+noise_scale=0.3 ---> 0.2 after 5M ---> 0.1 after 7M 
 RRT_budget=35
 max_steps   = 50
 minimum_exploration=0.01
@@ -31,13 +32,13 @@ rrt_min_visit=1000
 ######################################
 
 
-# agent2 settings: with sparse reward - node3
+# agent2 settings: node3
 ######################################
 max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
 num_updates=10
-num_agents=2
+num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=5
 warm_up=20000
@@ -45,14 +46,151 @@ stored_points_for_cell=10
 stored_trajectories_length=40
 alpha=0.5
 alpha_decay=0.9999997
+seed=20
 
 replay_buffer_size = 5e5
 hidden_size=128
-actor_learning_rate=2e-4
-critic_learning_rate=4e-4
+actor_learning_rate=1e-4
+critic_learning_rate=6e-4
 epsilon_decay=0.9999997
 epsilon=1
-noise_scale=0.2
+noise_scale=0.1
+RRT_budget=35
+max_steps   = 50
+minimum_exploration=0.01
+rrt_prob=0.9
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.98
+rrt_min_visit=1000
+######################################
+
+
+# agent3 settings: node3
+######################################
+max_frames  = 8e6
+max_steps   = 50
+batch_size  = 128
+num_updates=10
+num_agents=5
+checkpoints_interval=10000
+evaluation_attempts=5
+warm_up=20000
+stored_points_for_cell=10
+stored_trajectories_length=40
+alpha=0.5
+alpha_decay=0.9999997
+seed=80
+
+replay_buffer_size = 5e5
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=6e-4
+epsilon_decay=0.9999997
+epsilon=1
+noise_scale=0.3 ---> 0.2 after 5M ---> 0.1 after 7M
+RRT_budget=35
+max_steps   = 50
+minimum_exploration=0.01
+rrt_prob=0.9
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.98
+rrt_min_visit=1000
+######################################
+
+
+# agent4 settings: node2
+######################################
+max_frames  = 8e6
+max_steps   = 50
+batch_size  = 128
+num_updates=10
+num_agents=5
+checkpoints_interval=10000
+evaluation_attempts=5
+warm_up=20000
+stored_points_for_cell=10
+stored_trajectories_length=40
+alpha=0.5
+alpha_decay=0.9999997
+seed=60
+
+replay_buffer_size = 5e5
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=6e-4
+epsilon_decay=0.9999997
+epsilon=1
+noise_scale=0.2 but decreased to 0.1 after 6M frames
+RRT_budget=35
+max_steps   = 50
+minimum_exploration=0.01
+rrt_prob=0.9
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.98
+rrt_min_visit=1000
+######################################
+
+
+# agent5 settings: node4
+######################################
+max_frames  = 8e6
+max_steps   = 50
+batch_size  = 128
+num_updates=10
+num_agents=5
+checkpoints_interval=10000
+evaluation_attempts=5
+warm_up=20000
+stored_points_for_cell=10
+stored_trajectories_length=40
+alpha=0.5
+alpha_decay=0.9999997
+seed=50
+
+replay_buffer_size = 5e5
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=6e-4
+epsilon_decay=0.9999997
+epsilon=1
+noise_scale=0.1
+RRT_budget=35
+max_steps   = 50
+minimum_exploration=0.01
+rrt_prob=0.9
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.98
+rrt_min_visit=1000
+######################################
+
+
+# agent6 settings: node4
+######################################
+max_frames  = 8e6
+max_steps   = 50
+batch_size  = 128
+num_updates=10
+num_agents=5
+checkpoints_interval=10000
+evaluation_attempts=5
+warm_up=20000
+stored_points_for_cell=10
+stored_trajectories_length=40
+alpha=0.5
+alpha_decay=0.9999997
+seed=10
+
+replay_buffer_size = 5e5
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=6e-4
+epsilon_decay=0.9999997
+epsilon=1
+noise_scale=0.2 but decreased to 0.1 after 6M frames
 RRT_budget=35
 max_steps   = 50
 minimum_exploration=0.01
