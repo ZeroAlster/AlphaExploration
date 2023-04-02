@@ -15,9 +15,9 @@ import math
 ######################################
 replay_buffer_size = 5e5
 hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=6e-4
-epsilon_decay=0.9999997
+actor_learning_rate=2e-4
+critic_learning_rate=1e-3
+epsilon_decay=0.99999971
 epsilon=1
 noise_scale=0.3
 RRT_budget=35

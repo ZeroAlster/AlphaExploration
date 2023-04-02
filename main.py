@@ -12,6 +12,7 @@ from agent import Agent
 from simple_estimator import minimum_visit
 import torch
 import math
+import gym
 import sys
 import os
 
@@ -22,7 +23,7 @@ max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
 num_updates=10
-num_agents=6
+num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=5
 warm_up=20000
@@ -30,7 +31,7 @@ stored_points_for_cell=10
 stored_trajectories_length=40
 alpha=0.5
 alpha_decay=0.9999997
-seed=80
+seed=60
 ######################################
 
 
@@ -326,12 +327,18 @@ def train(agent,env,address):
 
 
 
-def main(address):
+def main(address,environment):
     # initiate the environment, get action and state space size, and get action range
-    env=Env(n=max_steps,maze_type='square_large')
-    num_actions = env.action_size
-    num_states  = env.state_size*2
-    action_range=env.action_range
+    if environment =="Pendulum":
+        pass
+    elif environment=="maze":
+        env=Env(n=max_steps,maze_type='square_large')
+        num_actions = env.action_size
+        num_states  = env.state_size*2
+        action_range=env.action_range
+    else:
+        sys.exit("The environment does not exist!")
+
     
     # initiate the agent
     agent=Agent(num_actions,num_states,action_range)
@@ -344,6 +351,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-a','--address',required=True)
     parser.add_argument('-t','--task',required=True)
+    parser.add_argument('-e','--environment',required=True)
     args = parser.parse_args()
     
     if  not os.path.exists(args.address):
@@ -352,21 +360,23 @@ if __name__ == '__main__':
         print("path is valid!")
     
     if args.task=="train":
-        main(args.address)
+        main(args.address,args.environment)
     elif args.task=="plot":
         # plot success rates and destinations of all agents
         success_rates=[]
         locations=[]
         
         for i in range(num_agents):
-            if i==3:
+            if i==0:
                 continue
+
             with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
                 success_rates.append(pickle.load(fp))
         
         for i in range(num_agents):
-            if i==3:
+            if i==0:
                 continue
+
             with open(args.address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
                 destinations=pickle.load(fp)
             locations.append([destinations,args.address+"/agent"+str(i+1)])
