@@ -54,7 +54,7 @@ def plot(address,locations,success_rates):
     horizon=np.zeros((1,len(success_rates[0])))
     for i in range(len(success_rates[0])):
         values=[]
-        for j in range(num_agents-1):
+        for j in range(num_agents):
             values.append(success_rates[j][i])
         mean[0][i]=sum(values)/len(values)
         std[0][i]=statistics.pstdev(values)
@@ -367,15 +367,11 @@ if __name__ == '__main__':
         locations=[]
         
         for i in range(num_agents):
-            if i==0:
-                continue
 
             with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
                 success_rates.append(pickle.load(fp))
         
         for i in range(num_agents):
-            if i==0:
-                continue
 
             with open(args.address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
                 destinations=pickle.load(fp)
