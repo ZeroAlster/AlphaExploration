@@ -26,9 +26,14 @@ minimum_exploration=0.01
 rrt_prob=0.9
 short_memory_size=int(5e4)
 tau=1e-2
-gamma=0.96
-rrt_min_visit=1000
+gamma=0.98
+rrt_min_visit=500
 ######################################
+
+
+# cpu or gpu
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 
 class Node:
@@ -149,6 +154,12 @@ class Agent():
         self.critic = Critic(self.num_states + self.num_actions, hidden_size, 1)
         self.critic_target = Critic(self.num_states + self.num_actions, hidden_size, 1)
 
+        # copy networks on GPU
+        self.actor.to(device)
+        self.actor_target.to(device)
+        self.critic.to(device)
+        self.critic_target.to(device)
+
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
             target_param.data.copy_(param.data)
 
@@ -220,9 +231,9 @@ class Agent():
                 option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
         else:
             #get the primitive action from the network
-            state = Variable(torch.from_numpy(state).float().unsqueeze(0))
+            state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
             action = self.actor.forward(state)
-            action = action.detach().numpy().flatten()
+            action = action.cpu().detach().numpy().flatten()
             
             # disable during evaluation
             if not evaluation:
@@ -248,12 +259,12 @@ class Agent():
         else:
             states, actions, rewards, next_states, done,steps = self.memory.sample(batch_size)
 
-        states = torch.FloatTensor(np.array(states))
-        actions = torch.FloatTensor(np.array(actions))
-        rewards = torch.FloatTensor(np.array(rewards))
-        next_states = torch.FloatTensor(np.array(next_states))
-        done=torch.FloatTensor(np.array([1-i for i in done]))
-        steps=torch.FloatTensor(np.array(steps))
+        states = torch.FloatTensor(np.array(states)).to(device)
+        actions = torch.FloatTensor(np.array(actions)).to(device)
+        rewards = torch.FloatTensor(np.array(rewards)).to(device)
+        next_states = torch.FloatTensor(np.array(next_states)).to(device)
+        done=torch.FloatTensor(np.array([1-i for i in done])).to(device)
+        steps=torch.FloatTensor(np.array(steps)).to(device)
         
         # Critic loss        
         Qvals = self.critic.forward(states, actions)

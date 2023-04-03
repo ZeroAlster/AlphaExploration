@@ -22,21 +22,17 @@ import os
 max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
-num_updates=10
+num_updates=12
 num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=5
 warm_up=20000
 stored_points_for_cell=10
 stored_trajectories_length=40
-alpha=0.5
+alpha=0.4
 alpha_decay=0.9999997
-seed=60
+seed=200
 ######################################
-
-
-# cpu or gpu
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # set random seeds
