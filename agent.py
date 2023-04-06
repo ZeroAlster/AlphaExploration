@@ -8,7 +8,6 @@ import random
 import torch.optim as optim
 from simple_estimator import SEstimator
 from torch.autograd import Variable
-import sys
 import math
 
 #hyper params
@@ -26,8 +25,8 @@ minimum_exploration=0.01
 rrt_prob=0.9
 short_memory_size=int(5e4)
 tau=1e-2
-gamma=0.98
-rrt_min_visit=500
+gamma=0.96
+rrt_min_visit=1000
 ######################################
 
 

@@ -12,26 +12,25 @@ from agent import Agent
 from simple_estimator import minimum_visit
 import torch
 import math
-import gym
 import sys
 import os
 
 
 #hyper params
 ######################################
-max_frames  = 8e6
+max_frames  = 10e6
 max_steps   = 50
 batch_size  = 128
-num_updates=12
-num_agents=5
+num_updates=10
+num_agents=11
 checkpoints_interval=10000
 evaluation_attempts=5
 warm_up=20000
 stored_points_for_cell=10
 stored_trajectories_length=40
-alpha=0.4
+alpha=0.5
 alpha_decay=0.9999997
-seed=200
+seed=12
 ######################################
 
 
@@ -49,12 +48,14 @@ def plot(address,locations,success_rates):
     mean=np.zeros((1,len(success_rates[0])))
     horizon=np.zeros((1,len(success_rates[0])))
     for i in range(len(success_rates[0])):
+        if i%3!=1:
+            continue
         values=[]
-        for j in range(num_agents):
-            values.append(success_rates[j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
+        for j in range(5):
+            values.append(success_rates[j][int(i/3)])
+        mean[0][int(i/3)]=sum(values)/len(values)
+        std[0][int(i/3)]=statistics.pstdev(values)
+        horizon[0][int(i/3)]=int(i/3)
     
     plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
     plt.fill_between(horizon[0,:],(mean-std)[0,:], (mean+std)[0,:])
@@ -291,7 +292,7 @@ def train(agent,env,address):
 
         # update number of updates from short memory
         if frame>int(2e6):
-            agent.short_memory_updates=int((frame/max_frames)*num_updates)
+            agent.short_memory_updates=int(frame/8e6)*num_updates
 
         # update the noise scale
         if frame>=int(5e6):
@@ -364,6 +365,10 @@ if __name__ == '__main__':
         
         for i in range(num_agents):
 
+            if i!=1 and i!=3 and i!=4 and i!=5 and i!=6:
+                continue
+
+            print(i+1)
             with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
                 success_rates.append(pickle.load(fp))
         
