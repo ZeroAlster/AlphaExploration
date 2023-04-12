@@ -18,48 +18,58 @@ import os
 
 #hyper params
 ######################################
-max_frames  = 10e6
+max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
 num_updates=10
-num_agents=11
+num_agents=15
 checkpoints_interval=10000
-evaluation_attempts=5
+evaluation_attempts=10
 warm_up=20000
-stored_points_for_cell=10
+stored_points_for_cell=100
 stored_trajectories_length=40
 alpha=0.5
 alpha_decay=0.9999997
-seed=12
 ######################################
 
 
-# set random seeds
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-random.seed(seed)
-np.random.seed(seed)
 
-
-def plot(address,locations,success_rates):
+def plot(address,locations,success_rates,explorations):
 
     # plot success rates
     std=np.zeros((1,len(success_rates[0])))
     mean=np.zeros((1,len(success_rates[0])))
     horizon=np.zeros((1,len(success_rates[0])))
     for i in range(len(success_rates[0])):
-        if i%3!=1:
-            continue
         values=[]
-        for j in range(5):
-            values.append(success_rates[j][int(i/3)])
-        mean[0][int(i/3)]=sum(values)/len(values)
-        std[0][int(i/3)]=statistics.pstdev(values)
-        horizon[0][int(i/3)]=int(i/3)
+        for j in range(num_agents):
+            values.append(success_rates[j][i])
+        mean[0][i]=sum(values)/len(values)
+        std[0][i]=statistics.pstdev(values)
+        horizon[0][i]=i
     
+    plt.figure()
     plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
     plt.fill_between(horizon[0,:],(mean-std)[0,:], (mean+std)[0,:])
     plt.savefig(address+"/success_rates.png")
+
+
+    #plot the exploration curves
+    std=np.zeros((1,len(explorations[0])))
+    mean=np.zeros((1,len(explorations[0])))
+    horizon=np.zeros((1,len(explorations[0])))
+    for i in range(len(explorations[0])):
+        values=[]
+        for j in range(num_agents):
+            values.append(explorations[j][i])
+        mean[0][i]=sum(values)/len(values)
+        std[0][i]=statistics.pstdev(values)
+        horizon[0][i]=i
+    
+    plt.figure()
+    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
+    plt.fill_between(horizon[0,:],(mean-std)[0,:], (mean+std)[0,:])
+    plt.savefig(address+"/env_coverage.png")
 
     
     # plot locations on the map
@@ -165,6 +175,15 @@ def evaluation(agent):
     return success/evaluation_attempts
 
 
+def exploration(agent):
+    min_val=400
+    visits=np.copy(agent.density_estimator.visits)-minimum_visit
+    covered=(visits>=min_val).sum()
+    all=visits.shape[0]*visits.shape[1]
+    return covered/all
+
+
+
 
 # need to be analyzed again.
 def save_to_memory(agent,episode_memory,short=False):
@@ -186,11 +205,8 @@ def save_to_memory(agent,episode_memory,short=False):
     
     # this is an unsuccessful trajectory: truncated MC update
     else:
-        i=0
         for entry in reversed(episode_memory):
-            reward=episode_reward*math.pow(agent.gamma,i)
-            agent.memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
-            i+=1
+            agent.memory.push(entry[0],entry[1],entry[2],entry[3],episode_done,1)
 
 
 def train(agent,env,address):
@@ -198,8 +214,9 @@ def train(agent,env,address):
     #define variables for plotting
     destinations=[]
     success_rates=[]
+    env_coverages=[]
     global alpha
-    
+
     
     # warmup period
     frame=0
@@ -224,6 +241,11 @@ def train(agent,env,address):
                     cell_x,cell_y=point_to_cell(state,agent.density_estimator)
                     if len(agent.path_array[cell_x][cell_y]) < stored_points_for_cell:
                         agent.path_array[cell_x][cell_y].append(trajectory.copy())
+                
+                
+                # recording exploration rate during warmup
+                if frame % checkpoints_interval==0:
+                    env_coverages.append(exploration(agent))
                 
                 # check if episode is done
                 frame+=1
@@ -269,30 +291,32 @@ def train(agent,env,address):
                     if len(agent.path_array[cell_x][cell_y]) < stored_points_for_cell:
                         agent.path_array[cell_x][cell_y].append(trajectory.copy())
                 
-                # recording the success rates after each checkpoint when the warmup is done
+                # recording the success rates and exploration rate after each checkpoint when the warmup is done
                 frame+=1
                 if frame % checkpoints_interval==0:
-                        print("next checkpoint: "+str(frame)+"  steps")
-                        success_rates.append(evaluation(agent))
+                    print("next checkpoint: "+str(frame)+"  steps")
+                    success_rates.append(evaluation(agent))
+                    env_coverages.append(exploration(agent))
+                        
                 
                 # adding successful trajectory to the short memory
                 if env.is_success:
                     save_to_memory(agent,episode_memory,short=True)
                 
+                # decaying the alpha
+                alpha=alpha*alpha_decay
+                
                 # check if episode is done
                 if done:
                     save_to_memory(agent,episode_memory)
                     break
-                
-                # decaying the alpha
-                alpha=alpha*alpha_decay
 
         # recording terminal states
         destinations.append(terminal)
 
         # update number of updates from short memory
         if frame>int(2e6):
-            agent.short_memory_updates=int(frame/8e6)*num_updates
+            agent.short_memory_updates=int(frame/max_frames)*num_updates
 
         # update the noise scale
         if frame>=int(5e6):
@@ -305,13 +329,15 @@ def train(agent,env,address):
             agent.update(batch_size,i)
         
 
-    # record training results: terminal states,success rates, and visits array
+    # record training results: terminal states,success rates, environment coverage, and visits array
     with open(address+"/locations", "wb") as fp:
             pickle.dump(destinations, fp)
     with open(address+"/success_rates", "wb") as fp:
             pickle.dump(success_rates, fp)
     with open(address+"/successful_trajectories", "wb") as fp:
             pickle.dump(agent.short_memory.buffer, fp)
+    with open(address+"/env_coverage", "wb") as fp:
+            pickle.dump(env_coverages, fp)
     np.save(address+"/visits",agent.density_estimator.visits)
 
     # save agent nn models
@@ -349,7 +375,19 @@ if __name__ == '__main__':
     parser.add_argument('-a','--address',required=True)
     parser.add_argument('-t','--task',required=True)
     parser.add_argument('-e','--environment',required=True)
+    parser.add_argument('-s','--seed',required=True)
     args = parser.parse_args()
+
+    
+    # set random seeds
+    seed=int(args.seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
+
     
     if  not os.path.exists(args.address):
         sys.exit("The path is wrong!")
@@ -359,26 +397,25 @@ if __name__ == '__main__':
     if args.task=="train":
         main(args.address,args.environment)
     elif args.task=="plot":
-        # plot success rates and destinations of all agents
+        # plot success rates, exploration curves, and destinations of all agents
         success_rates=[]
         locations=[]
+        explorations=[]
         
         for i in range(num_agents):
-
-            if i!=1 and i!=3 and i!=4 and i!=5 and i!=6:
-                continue
-
-            print(i+1)
             with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
                 success_rates.append(pickle.load(fp))
         
         for i in range(num_agents):
-
+            with open(args.address+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+                explorations.append(pickle.load(fp))
+        
+        for i in range(num_agents):
             with open(args.address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
                 destinations=pickle.load(fp)
             locations.append([destinations,args.address+"/agent"+str(i+1)])
         
-        plot(args.address,success_rates=success_rates,locations=locations)
+        plot(args.address,success_rates=success_rates,locations=locations,explorations=explorations)
 
     else:
         pass

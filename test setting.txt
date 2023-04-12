@@ -1,203 +1,31 @@
-# agent1 settings:
+# agent settings:
 ######################################
 max_frames  = 8e6
 max_steps   = 50
 batch_size  = 128
 num_updates=10
-num_agents=5
+num_agents=15
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
-stored_points_for_cell=10
+stored_points_for_cell=100
 stored_trajectories_length=40
 alpha=0.5
 alpha_decay=0.9999997
-seed=20
-
-replay_buffer_size = 5e5
-hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=6e-4
-epsilon_decay=0.9999997
-epsilon=1
-noise_scale=0.1
-RRT_budget=35
-max_steps   = 50
-minimum_exploration=0.01
-rrt_prob=0.9
-short_memory_size=int(5e4)
-tau=1e-2
-gamma=0.98
-rrt_min_visit=1000
-######################################
-
-
-
-# agent2 settings:
-######################################
-max_frames  = 8e6
-max_steps   = 50
-batch_size  = 128
-num_updates=10
-num_agents=5
-checkpoints_interval=10000
-evaluation_attempts=10
-warm_up=20000
-stored_points_for_cell=10
-stored_trajectories_length=40
-alpha=0.5
-alpha_decay=0.9999997
-seed=50
-
-replay_buffer_size = 5e5
-hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=6e-4
-epsilon_decay=0.9999997
-epsilon=1
-noise_scale=0.1
-RRT_budget=35
-max_steps   = 50
-minimum_exploration=0.01
-rrt_prob=0.9
-short_memory_size=int(5e4)
-tau=1e-2
-gamma=0.98
-rrt_min_visit=1000
-######################################
-
-
-# agent3 settings:
-######################################
-max_frames  = 8e6
-max_steps   = 50
-batch_size  = 128
-num_updates=10
-num_agents=5
-checkpoints_interval=10000
-evaluation_attempts=10
-warm_up=20000
-stored_points_for_cell=10
-stored_trajectories_length=40
-alpha=0.5
-alpha_decay=0.9999997
-seed=10
-
-replay_buffer_size = 5e5
-hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=6e-4
-epsilon_decay=0.9999997
-epsilon=1
-noise_scale=0.2 but decreased to 0.1 after 6M frames
-RRT_budget=35
-max_steps   = 50
-minimum_exploration=0.01
-rrt_prob=0.9
-short_memory_size=int(5e4)
-tau=1e-2
-gamma=0.98
-rrt_min_visit=1000
-######################################
-
-
-agent4 settings:
-######################################
-max_frames  = 8e6
-max_steps   = 50
-batch_size  = 128
-num_updates=10
-num_agents=5
-checkpoints_interval=10000
-evaluation_attempts=10
-warm_up=20000
-stored_points_for_cell=10
-stored_trajectories_length=40
-alpha=0.5
-alpha_decay=0.9999997
-seed=60
 
 replay_buffer_size = 5e5
 hidden_size=128
 actor_learning_rate=1e-4
 critic_learning_rate=1e-3
-epsilon_decay=0.99999971
+epsilon_decay=0.99999975
 epsilon=1
-noise_scale=0.3 ---> 0.2 after 5M ---> 0.1 after 7M
-RRT_budget=35
+noise_scale=0.3
+RRT_budget=40
 max_steps   = 50
 minimum_exploration=0.01
-rrt_prob=0.9
+rrt_prob=1
 short_memory_size=int(5e4)
 tau=1e-2
-gamma=0.96
-rrt_min_visit=1000
-######################################
-
-
-agent5 settings: node4
-######################################
-max_frames  = 8e6
-max_steps   = 50
-batch_size  = 128
-num_updates=10
-num_agents=5
-checkpoints_interval=10000
-evaluation_attempts=10
-warm_up=20000
-stored_points_for_cell=10
-stored_trajectories_length=40
-alpha=0.5
-alpha_decay=0.9999997
-seed=200
-
-replay_buffer_size = 5e5
-hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=1e-3
-epsilon_decay=0.99999971
-epsilon=1
-noise_scale=0.3 ---> 0.2 after 5M ---> 0.1 after 7M
-RRT_budget=35
-max_steps   = 50
-minimum_exploration=0.01
-rrt_prob=0.9
-short_memory_size=int(5e4)
-tau=1e-2
-gamma=0.96
-rrt_min_visit=1000
-######################################
-
-
-agent6 settings: node3
-######################################
-max_frames  = 8e6
-max_steps   = 50
-batch_size  = 128
-num_updates=10
-num_agents=5
-checkpoints_interval=10000
-evaluation_attempts=10
-warm_up=20000
-stored_points_for_cell=10
-stored_trajectories_length=40
-alpha=0.5
-alpha_decay=0.9999997
-seed=12
-
-replay_buffer_size = 5e5
-hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=1e-3
-epsilon_decay=0.99999971
-epsilon=1
-noise_scale=0.3 ---> 0.2 after 5M ---> 0.1 after 7M
-RRT_budget=35
-max_steps   = 50
-minimum_exploration=0.01
-rrt_prob=0.9
-short_memory_size=int(5e4)
-tau=1e-2
-gamma=0.96
-rrt_min_visit=1000
+gamma=0.98
+rrt_min_visit= 500
 ######################################

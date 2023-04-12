@@ -16,17 +16,17 @@ replay_buffer_size = 5e5
 hidden_size=128
 actor_learning_rate=1e-4
 critic_learning_rate=1e-3
-epsilon_decay=0.99999971
+epsilon_decay=0.99999975
 epsilon=1
 noise_scale=0.3
-RRT_budget=35
+RRT_budget=40
 max_steps   = 50
 minimum_exploration=0.01
-rrt_prob=0.9
+rrt_prob=1
 short_memory_size=int(5e4)
 tau=1e-2
-gamma=0.96
-rrt_min_visit=1000
+gamma=0.98
+rrt_min_visit=500
 ######################################
 
 

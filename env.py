@@ -209,6 +209,7 @@ class Maze:
                 new_dx = r * dx
                 new_dy = r * dy
                 repulsion = float(np.abs(np.random.rand() * 0.01))
+                
                 if direction in ['right', 'left']:
                     new_dx -= np.sign(dx) * repulsion
                     partial_coords = cx + new_dx, cy + new_dy
@@ -398,21 +399,21 @@ class Env(gym.Env):
 
     
     # sparse reward function
-    # def reward(self):
-    #     if self.is_success:
-    #         return torch.tensor(10)
-    #     else:
-    #         return torch.tensor(0)
+    def reward(self):
+        if self.is_success:
+            return torch.tensor(15)
+        else:
+            return torch.tensor(-1)
         
     # dense reward function
-    def reward(self):
-        if self.is_done:
-            if self.is_success:
-                return torch.tensor(15)
-            else:
-                return -self.dist(self.state,self.goal)
-        else:
-            return torch.tensor(0)
+    # def reward(self):
+    #     if self.is_done:
+    #         if self.is_success:
+    #             return torch.tensor(15)
+    #         else:
+    #             return -self.dist(self.state,self.goal)
+    #     else:
+    #         return torch.tensor(0)
 
     @property
     def achieved(self):
