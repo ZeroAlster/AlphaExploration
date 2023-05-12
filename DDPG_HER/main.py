@@ -349,4 +349,7 @@ if __name__ == '__main__':
                 destinations=pickle.load(fp)
             locations.append([destinations,args.address+"/agent"+str(i+1)])
         
-        plot(args.address,success_rates=success_rates,locations=locations,explorations=explo
+        plot(args.address,success_rates=success_rates,locations=locations,explorations=explorations)
+
+    else:
+        pass
