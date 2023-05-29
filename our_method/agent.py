@@ -9,6 +9,7 @@ import torch.optim as optim
 from general.simple_estimator import SEstimator
 from torch.autograd import Variable
 import math
+import sys
 
 #hyper params
 ######################################
@@ -73,6 +74,31 @@ class Memory:
             step_batch.append(step)
         
         return state_batch, action_batch, reward_batch, next_state_batch, done_batch,step_batch
+    
+
+    def CER_sample(self,batch_size):
+        state_batch = []
+        action_batch = []
+        reward_batch = []
+        next_state_batch = []
+        done_batch = []
+        step_batch=[]
+
+        batch=[]
+        for i in range(batch_size):
+            batch.append(self.buffer[-(i+1)])
+
+        for experience in batch:
+            state, action, reward, next_state, done,step = experience
+            state_batch.append(state)
+            action_batch.append(action)
+            reward_batch.append(reward)
+            next_state_batch.append(next_state)
+            done_batch.append(done)
+            step_batch.append(step)
+        
+        return state_batch, action_batch, reward_batch, next_state_batch, done_batch,step_batch
+
 
     def __len__(self):
         return len(self.buffer)
@@ -144,7 +170,7 @@ class Agent():
         self.epsilon=epsilon
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
-        self.short_memory_updates=0
+        self.short_memory_updates=1
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -249,8 +275,9 @@ class Agent():
     
     def update(self, batch_size,update_number):
         
-        if update_number<self.short_memory_updates and len(self.short_memory)>0:
-            states, actions, rewards, next_states, done,steps = self.short_memory.sample(min(batch_size,len(self.short_memory)))
+        #if update_number<self.short_memory_updates and len(self.short_memory)>0:
+        if update_number<self.short_memory_updates:
+            states, actions, rewards, next_states, done,steps = self.memory.CER_sample(batch_size)
         else:
             states, actions, rewards, next_states, done,steps = self.memory.sample(batch_size)
 

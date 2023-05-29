@@ -1,6 +1,6 @@
 # agent successful settings:
 ######################################
-max_frames  = 8e6
+max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
@@ -22,3 +22,5 @@ tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
 ######################################
+
+good agents: 1, 4, 5, 6, 8, 9 

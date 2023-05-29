@@ -18,18 +18,21 @@ import os
 from general.simple_estimator import SEstimator
 
 
+
+# current version: results for CER buffer.
+
+
 #hyper params
 ######################################
 max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
-num_agents=5
+num_agents=6
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
 ######################################
-
 
 
 def plot(address,locations,success_rates,explorations):
@@ -215,7 +218,6 @@ def train(agent,env,address):
                 # recording the last location in each episode
                 terminal=state
                 
-                
                 # recording exploration rate during warmup
                 if frame % checkpoints_interval==0:
                     env_coverages.append(exploration(env_density))
@@ -277,8 +279,8 @@ def train(agent,env,address):
         # recording terminal states
         destinations.append([terminal,frame])
 
-        # update number of updates from short memory
-        agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        # set number of updates from short memory
+        #agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
 
         # update after each episode when the warmup is done

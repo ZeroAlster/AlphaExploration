@@ -11,24 +11,6 @@ from matplotlib.font_manager import FontProperties
 
 
 
-address1="DDPG_temporal/results_budget"
-address2="our_method/results_exploration_budget"
-
-for i in range(10):
-    with open(address1+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations=pickle.load(fp)
-            print("agent"+str(i+1)+" : "+str(explorations[-1]))
-
-print("*"*30)
-
-for i in range(10):
-    with open(address2+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations=pickle.load(fp)
-            print("agent"+str(i+1)+" : "+str(explorations[-1]))
-
-
-
-
 # plot the success rates for the paper
 ######################################
 # success1=[]
@@ -165,9 +147,9 @@ for i in range(10):
 
 # print number of successes for each agent
 ######################################
-# num_agent=5
+# num_agent=8
 # for  i in range(num_agent):
-#     with open("our_method/results_without_exploration/agent"+str(i+1)+"/locations", 'rb') as fp:
+#     with open("our_method/results_with_CER/agent"+str(i+1)+"/locations", 'rb') as fp:
 #                 locations=pickle.load(fp)
 #     success=0
 #     for k in range(len(locations)):
