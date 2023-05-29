@@ -1,4 +1,4 @@
-# agent settings:
+# agent successful settings:
 ######################################
 max_frames  = 8e6
 max_steps   = 100
@@ -21,10 +21,4 @@ short_memory_size=int(5e4)
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-######################################
-
-
-# DDPG settings:
-######################################
-
 ######################################

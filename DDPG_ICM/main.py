@@ -20,7 +20,7 @@ max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=15
-num_agents=10
+num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
@@ -81,6 +81,13 @@ def plot(address,locations,success_rates,explorations):
 
     plt.fill_between(horizon[0,:],down_bar,up_bar)
     plt.savefig(address+"/env_coverage.png")
+
+
+    # just in case
+    for j in range(num_agents):
+        plt.figure()
+        plt.plot(explorations[j], 'k-',color="blue")
+        plt.savefig(address+"/agent"+str(j+1)+"/env_coverage.png")
 
     
     # plot locations on the map

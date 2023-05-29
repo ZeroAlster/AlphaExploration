@@ -10,7 +10,7 @@ import numpy as np
 import pickle
 import random
 import statistics
-from agent import Agent
+from our_method.agent import Agent
 from general.simple_estimator import minimum_visit
 import torch
 import math
@@ -24,7 +24,7 @@ max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
-num_agents=10
+num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
@@ -35,7 +35,7 @@ warm_up=20000
 def plot(address,locations,success_rates,explorations):
 
     # plot success rates
-    number=600
+    number=len(success_rates[0])
     std=np.zeros((1,number))
     mean=np.zeros((1,number))
     horizon=np.zeros((1,number))

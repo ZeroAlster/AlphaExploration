@@ -177,7 +177,7 @@ class Agent():
         for state in states:
             cell_x,cell_y=self.point_to_cell(state)
             intrinsic=self.beta/(math.sqrt(self.density_estimator.visits[cell_x][cell_y]))
-            bonus.append([min(intrinsic,self.beta)])
+            bonus.append([min(intrinsic,10)])
 
         return bonus
     

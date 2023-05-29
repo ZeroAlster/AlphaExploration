@@ -1,7 +1,7 @@
 import sys
 sys.path.append("/nfs/home/futuhi/AlphaExploration")
 import argparse
-from DDPG.ddpg import Agent
+from DDPG_HER.ddpg_her import Agent
 from general.env import Env
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +20,7 @@ max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=15
-num_agents=10
+num_agents=5
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
