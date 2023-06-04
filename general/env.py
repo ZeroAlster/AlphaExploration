@@ -347,7 +347,7 @@ class Env(gym.Env):
 
         # gym parameters
         self.action_space = spaces.Box(low=-0.95, high=0.95,shape=(2,))
-        self.observation_space = spaces.Box(low=-0.5, high=9.5,shape=(2,), dtype=np.float32)        
+        self.observation_space = spaces.Box(low=-0.5, high=9.5,shape=(4,), dtype=np.float32)        
         
         self.reset()
 

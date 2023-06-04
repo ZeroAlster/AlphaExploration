@@ -1,2 +1,4 @@
 .venv
 maf_files
+**/__pycache__/
+__pycache__/

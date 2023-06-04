@@ -170,7 +170,7 @@ class Agent():
         self.epsilon=epsilon
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
-        self.short_memory_updates=1
+        self.short_memory_updates=0
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -275,9 +275,8 @@ class Agent():
     
     def update(self, batch_size,update_number):
         
-        #if update_number<self.short_memory_updates and len(self.short_memory)>0:
-        if update_number<self.short_memory_updates:
-            states, actions, rewards, next_states, done,steps = self.memory.CER_sample(batch_size)
+        if update_number<self.short_memory_updates and len(self.short_memory)>0:
+            states, actions, rewards, next_states, done,steps = self.short_memory.sample(min(batch_size,len(self.short_memory)))
         else:
             states, actions, rewards, next_states, done,steps = self.memory.sample(batch_size)
 

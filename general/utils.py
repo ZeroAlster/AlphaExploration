@@ -11,6 +11,73 @@ from matplotlib.font_manager import FontProperties
 
 
 
+# success1=[]
+# success2=[]
+# success3=[]
+# address1="our_method/results"
+# address2="our_method/results_with_CER"
+# address3="our_method/results_with_one_buffer"
+
+# for i in range(10):
+#     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success1.append(pickle.load(fp))
+# for i in range(13):
+#     with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success2.append(pickle.load(fp))
+# for i in range(8):
+#     with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success3.append(pickle.load(fp))
+
+# plt.figure()
+# ax = plt.subplot(111)
+# all_success=[]
+# labels=["two replay buffers","one replay buffer","CER"]
+# colors=["blue","darkorange","green"]
+# all_success.append(success1)
+# all_success.append(success2)
+# all_success.append(success3)
+
+
+# for k in range(3):
+#     number=len(success2[0])
+#     std=np.zeros((1,number))
+#     mean=np.zeros((1,number))
+#     horizon=np.zeros((1,number))
+
+#     for i in range(number):
+#         values=[]
+#         if k==0:
+#             agents=10
+#         elif k==1:
+#             agents=13
+#         else:
+#             agents=8
+#         for j in range(agents):
+#             values.append(all_success[k][j][i])
+#         mean[0][i]=sum(values)/len(values)
+#         std[0][i]=statistics.pstdev(values)
+#         horizon[0][i]=i
+    
+#     plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
+
+#     # fix the error bar
+#     std=std*0.75
+#     down_bar=np.maximum((mean-std)[0,:],0)
+#     up_bar=np.minimum((mean+std)[0,:],1)
+
+#     plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
+
+# fontP = FontProperties()
+# fontP.set_size('x-small')
+
+# plt.title("success rate")
+# plt.xlabel("checkpoints")
+# ax.legend(loc="lower right",bbox_to_anchor=(1., 0.05),prop=fontP)
+# plt.savefig("general/final_figures/buffers.png")
+
+
+
+
 # plot the success rates for the paper
 ######################################
 # success1=[]
@@ -54,7 +121,10 @@ from matplotlib.font_manager import FontProperties
 
 #     for i in range(number):
 #         values=[]
-#         for j in range(5):
+#         agents=5
+#         if k==3:
+#             agents=10
+#         for j in range(agents):
 #             values.append(all_success[k][j][i])
 #         mean[0][i]=sum(values)/len(values)
 #         std[0][i]=statistics.pstdev(values)
@@ -147,9 +217,9 @@ from matplotlib.font_manager import FontProperties
 
 # print number of successes for each agent
 ######################################
-# num_agent=8
+# num_agent=15
 # for  i in range(num_agent):
-#     with open("our_method/results_with_CER/agent"+str(i+1)+"/locations", 'rb') as fp:
+#     with open("our_method/results_new_version/agent"+str(i+1)+"/locations", 'rb') as fp:
 #                 locations=pickle.load(fp)
 #     success=0
 #     for k in range(len(locations)):

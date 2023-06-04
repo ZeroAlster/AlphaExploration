@@ -18,17 +18,13 @@ import os
 from general.simple_estimator import SEstimator
 
 
-
-# current version: results for CER buffer.
-
-
 #hyper params
 ######################################
 max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
-num_agents=6
+num_agents=11
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
@@ -164,26 +160,28 @@ def exploration(density):
 
 
 def save_to_buffer(agent,episode_memory,short=False):
-
-    episode_reward=episode_memory[-1][2]
+   
     episode_next_state=episode_memory[-1][3]
     episode_done=episode_memory[-1][4]
 
-    # this is a successful trajectory: MC update
+    # This is a successful trajectory: MC update
     if episode_done:
-        i=0
+        G=0
         for entry in reversed(episode_memory):
-            reward=episode_reward*math.pow(agent.gamma,i)
+            G=entry[2]+agent.gamma*G
             if not short:
-                agent.memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
+                agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
             else:
-                agent.short_memory.push(entry[0],entry[1],reward,episode_next_state,episode_done,i+1)
-            i+=1    
+                agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
     
-    # this is the same for unsuccessful trajectories: one-step TD
+    # This is an unsuccessful trajectory: longest n-step return
     else:
+        i=0
+        G=0
         for entry in reversed(episode_memory):
-            agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+            G=entry[2]+agent.gamma*G
+            agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
+            i+=1
 
 
 def train(agent,env,address):
@@ -280,7 +278,7 @@ def train(agent,env,address):
         destinations.append([terminal,frame])
 
         # set number of updates from short memory
-        #agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
 
         # update after each episode when the warmup is done
