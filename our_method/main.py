@@ -1,7 +1,7 @@
 import sys
 sys.path.append("/nfs/home/futuhi/AlphaExploration")
 import argparse
-from general.env import Env
+from general.maze import Env
 from IPython.display import clear_output
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -16,6 +16,12 @@ import torch
 import math
 import os
 from general.simple_estimator import SEstimator
+
+
+
+# current version: one buffer only
+    # turn off short memory update number
+    # turn off shuffling the memory
 
 
 #hyper params
@@ -277,8 +283,8 @@ def train(agent,env,address):
         # recording terminal states
         destinations.append([terminal,frame])
 
-        # set number of updates from short memory
-        agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        # set number of updates from short memory (off for one-buffer settings)
+        #agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
 
         # update after each episode when the warmup is done
@@ -332,12 +338,11 @@ if __name__ == '__main__':
     parser.add_argument('-a','--address',required=True)
     parser.add_argument('-t','--task',required=True)
     parser.add_argument('-e','--environment',required=True)
-    parser.add_argument('-s','--seed',required=True)
     args = parser.parse_args()
 
     
     # set random seeds
-    seed=int(args.seed)
+    seed=random.randint(0,100)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True

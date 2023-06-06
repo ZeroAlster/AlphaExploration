@@ -1,6 +1,6 @@
 import pickle
 from stable_baselines3.common.callbacks import BaseCallback
-from general.env import Env
+from general.maze import Env
 import math
 
 

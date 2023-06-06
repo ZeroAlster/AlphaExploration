@@ -1,5 +1,5 @@
 import torch
-from general.env import Env
+from general.maze import Env
 import torch.nn as nn
 import torch.nn.functional as F 
 from collections import deque
@@ -50,8 +50,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -276,6 +276,7 @@ class Agent():
     def update(self, batch_size,update_number):
         
         if update_number<self.short_memory_updates and len(self.short_memory)>0:
+            sys.exit("Second buffer is being used.")
             states, actions, rewards, next_states, done,steps = self.short_memory.sample(min(batch_size,len(self.short_memory)))
         else:
             states, actions, rewards, next_states, done,steps = self.memory.sample(batch_size)

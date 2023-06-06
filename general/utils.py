@@ -84,12 +84,14 @@ from matplotlib.font_manager import FontProperties
 # success2=[]
 # success3=[]
 # success4=[]
-# address1="DDPG/results"
-# address2="DDPG_HER/results"
-# address3="DDPG_ICM/results"
-# address4="our_method/results"
+# success5=[]
+# address1="DDPG/results/results_maze"
+# address2="DDPG_HER/results/results_maze"
+# address3="DDPG_ICM/results/results_maze"
+# address4="our_method/results/results_maze/full_results"
+# address5="SAC/results/results_maze"
 
-# for i in range(5):
+# for i in range(10):
 #     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success1.append(pickle.load(fp))
 # for i in range(5):
@@ -98,22 +100,26 @@ from matplotlib.font_manager import FontProperties
 # for i in range(5):
 #     with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success3.append(pickle.load(fp))
-# for i in range(10):
+# for i in range(11):
 #     with open(address4+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success4.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address5+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success5.append(pickle.load(fp))
 
 # plt.figure()
 # ax = plt.subplot(111)
 # all_success=[]
-# labels=["DDPG","DDPG + HER","DDPG + intrinsic motivation","our method"]
-# colors=["blue","darkorange","green","purple"]
+# labels=["DDPG","DDPG + HER","DDPG + intrinsic motivation","our method","SAC"]
+# colors=["blue","darkorange","green","purple","aqua"]
 # all_success.append(success1)
 # all_success.append(success2)
 # all_success.append(success3)
 # all_success.append(success4)
+# all_success.append(success5)
 
 
-# for k in range(4):
+# for k in range(5):
 #     number=len(success1[0])
 #     std=np.zeros((1,number))
 #     mean=np.zeros((1,number))
@@ -122,8 +128,10 @@ from matplotlib.font_manager import FontProperties
 #     for i in range(number):
 #         values=[]
 #         agents=5
-#         if k==3:
+#         if k==0 or k==4:
 #             agents=10
+#         elif k==3:
+#             agents=11
 #         for j in range(agents):
 #             values.append(all_success[k][j][i])
 #         mean[0][i]=sum(values)/len(values)
@@ -133,7 +141,7 @@ from matplotlib.font_manager import FontProperties
 #     plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
 
 #     # fix the error bar
-#     std=std*0.75
+#     std=std
 #     down_bar=np.maximum((mean-std)[0,:],0)
 #     up_bar=np.minimum((mean+std)[0,:],1)
 
@@ -144,21 +152,21 @@ from matplotlib.font_manager import FontProperties
 
 # plt.title("success rate")
 # plt.xlabel("checkpoints")
-# ax.legend(loc="lower right",bbox_to_anchor=(1., 0.05),prop=fontP)
+# ax.legend(loc="upper left",prop=fontP)
 # plt.savefig("general/final_figures/success_rates.png")
-######################################
+#####################################
 
 
 # plot environment coverage for the paper
-######################################
+# #####################################
 # explorations1=[]
 # explorations2=[]
 # explorations3=[]
 # explorations4=[]
-# address1="DDPG_ICM/results"
-# address2="DDPG_temporal/results"
-# address3="DDPG/results"
-# address4="our_method/results"
+# address1="DDPG_ICM/results/results_maze"
+# address2="DDPG_temporal/results/results_maze/results"
+# address3="DDPG/results/results_maze"
+# address4="our_method/results/results_maze/full_results"
 
 # for i in range(5):
 #     with open(address1+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
@@ -166,10 +174,10 @@ from matplotlib.font_manager import FontProperties
 # for i in range(5):
 #     with open(address2+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
 #             explorations2.append(pickle.load(fp))
-# for i in range(5):
+# for i in range(10):
 #     with open(address3+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
 #             explorations3.append(pickle.load(fp))
-# for i in range(5):
+# for i in range(11):
 #     with open(address4+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
 #             explorations4.append(pickle.load(fp))
 
@@ -191,6 +199,12 @@ from matplotlib.font_manager import FontProperties
 
 #     for i in range(number):
 #         values=[]
+#         agent=5
+#         if k==2:
+#             agents=10
+#         elif k==3:
+#              agents=11 
+
 #         for j in range(5):
 #             values.append(explorations[k][j][i])
 #         mean[0][i]=sum(values)/len(values)
@@ -209,7 +223,7 @@ from matplotlib.font_manager import FontProperties
 # plt.xlabel("checkpoints")
 # ax.legend(loc="upper left")
 # plt.savefig("general/final_figures/env_coverage.png")
-######################################
+# ######################################
 
 
 
@@ -219,7 +233,9 @@ from matplotlib.font_manager import FontProperties
 ######################################
 # num_agent=15
 # for  i in range(num_agent):
-#     with open("our_method/results_new_version/agent"+str(i+1)+"/locations", 'rb') as fp:
+#     if i==10:
+#         continue
+#     with open("our_method/results/results_maze/results_with_one_buffer/agent"+str(i+1)+"/locations", 'rb') as fp:
 #                 locations=pickle.load(fp)
 #     success=0
 #     for k in range(len(locations)):

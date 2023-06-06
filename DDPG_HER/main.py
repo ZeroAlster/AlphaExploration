@@ -2,7 +2,7 @@ import sys
 sys.path.append("/nfs/home/futuhi/AlphaExploration")
 import argparse
 from DDPG_HER.ddpg_her import Agent
-from general.env import Env
+from general.maze import Env
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle

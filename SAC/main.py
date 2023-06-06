@@ -1,8 +1,8 @@
 import sys
 sys.path.append("/nfs/home/futuhi/AlphaExploration")
 import argparse
-from Soft_Actor_Critic.sac_agent import CustomCallback
-from general.env import Env
+from SAC.sac_agent import CustomCallback
+from general.maze import Env
 from IPython.display import clear_output
 import matplotlib.pyplot as plt
 from matplotlib import animation
