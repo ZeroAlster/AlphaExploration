@@ -19,9 +19,7 @@ from general.simple_estimator import SEstimator
 
 
 
-# current version: one buffer only
-    # turn off short memory update number
-    # turn off shuffling the memory
+# current version: one step TD for all samples
 
 
 #hyper params
@@ -30,7 +28,7 @@ max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
-num_agents=11
+num_agents=9
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
@@ -164,30 +162,65 @@ def exploration(density):
     all=visits.shape[0]*visits.shape[1]
     return covered/all
 
-
-def save_to_buffer(agent,episode_memory,short=False):
+# main method to do updates
+# def save_to_buffer(agent,episode_memory,short=False):
    
-    episode_next_state=episode_memory[-1][3]
-    episode_done=episode_memory[-1][4]
+#     episode_next_state=episode_memory[-1][3]
+#     episode_done=episode_memory[-1][4]
 
-    # This is a successful trajectory: MC update
-    if episode_done:
-        G=0
-        for entry in reversed(episode_memory):
-            G=entry[2]+agent.gamma*G
-            if not short:
-                agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
-            else:
-                agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
+#     # This is a successful trajectory: MC update
+#     if episode_done:
+#         G=0
+#         for entry in reversed(episode_memory):
+#             G=entry[2]+agent.gamma*G
+#             if not short:
+#                 agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
+#             else:
+#                 agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
     
-    # This is an unsuccessful trajectory: longest n-step return
-    else:
-        i=0
-        G=0
-        for entry in reversed(episode_memory):
-            G=entry[2]+agent.gamma*G
-            agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
-            i+=1
+
+#     # This is an unsuccessful trajectory: longest n-step return
+#     else:
+#         i=0
+#         G=0
+#         for entry in reversed(episode_memory):
+#             G=entry[2]+agent.gamma*G
+#             agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
+#             i+=1
+
+# This is used for one-step TD update
+# def save_to_buffer(agent,episode_memory,short=False):
+#     for entry in (episode_memory):
+#         if not short:
+#             agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+#         else:
+#             agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+
+
+# This is used for average of first 8-step TD updates
+def save_to_buffer(agent,episode_memory,short=False):
+    for i in range(len(episode_memory)):
+        states=[]
+        rewards=[]
+        steps=[]
+        dones=[]
+        reward=0
+        step=0
+        for j in range(i,min(len(episode_memory),i+8)):
+            states.append(episode_memory[j][3])
+            dones.append(episode_memory[j][4])
+            reward+=math.pow(agent.gamma,step)*episode_memory[j][2]
+            step+=1
+            steps.append(step)
+            rewards.append(reward)
+            
+        
+        # append to memory
+        if not short:
+            agent.memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
+        else:
+            agent.short_memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
+        
 
 
 def train(agent,env,address):
@@ -284,7 +317,7 @@ def train(agent,env,address):
         destinations.append([terminal,frame])
 
         # set number of updates from short memory (off for one-buffer settings)
-        #agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
 
         # update after each episode when the warmup is done

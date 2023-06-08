@@ -1,4 +1,7 @@
 import sys
+import gym
+import mujoco_maze  # noqa
+from mujoco_maze.maze_env import MazeEnv
 sys.path.append("/nfs/home/futuhi/AlphaExploration")
 import argparse
 from SAC.sac_agent import CustomCallback
@@ -56,30 +59,39 @@ def plot(address,destinations=None,env=None,success_rates=False):
 
 
 
-def train(agent,address):
+def train(agent,address,environment):
     
     # train and save the model
-    agent.learn(max_frames,callback=CustomCallback(address=address))
+    agent.learn(max_frames,callback=CustomCallback(address=address,environment=environment))
     agent.save(address+"/sac_agent")
 
 
 
-def main(address):
-    # initialize the environment
-    env=Env(n=max_steps,maze_type='square_large')
+def main(address,environment):
+    # initialize the environment and noise
+    if environment=="maze":
+        env=Env(n=max_steps,maze_type='square_large')
+        sigma=0.2 * np.ones(2)
+    elif environment=="point":
+        env=gym.make("PointUMaze-v1")
+        sigma=np.ones(2)* 0.2
+        sigma[1]=sigma[1]/4
+    else:
+        sys.exit("environment is not valid")
     
     # initiate the agent
-    action_noise = NormalActionNoise(mean=np.zeros(2), sigma=0.3 * np.ones(2))
+    action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
     policy_kwargs = dict(net_arch=dict(pi=[128,128,128], qf=[128,128,128]))
     agent = SAC("MlpPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
                 learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(12,"step"),action_noise=action_noise)
 
     # train the agent
-    train(agent,address)
+    train(agent,address,environment)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-a','--address',required=True)
+    parser.add_argument('-e','--environment',required=True)
     args = parser.parse_args()
-    main(args.address)
+    main(args.address,args.environment)

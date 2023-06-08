@@ -10,7 +10,6 @@ import statistics
 from matplotlib.font_manager import FontProperties
 
 
-
 # success1=[]
 # success2=[]
 # success3=[]
@@ -233,9 +232,7 @@ from matplotlib.font_manager import FontProperties
 ######################################
 # num_agent=15
 # for  i in range(num_agent):
-#     if i==10:
-#         continue
-#     with open("our_method/results/results_maze/results_with_one_buffer/agent"+str(i+1)+"/locations", 'rb') as fp:
+#     with open("our_method/results/results_maze/update_results/one_step_TD/agent"+str(i+1)+"/locations", 'rb') as fp:
 #                 locations=pickle.load(fp)
 #     success=0
 #     for k in range(len(locations)):
