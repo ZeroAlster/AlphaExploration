@@ -122,7 +122,10 @@ class Critic(nn.Module):
         Params state and actions are torch tensors
         """
 
-        x = torch.cat([state, action], 1)
+        if len(state.shape)==3:
+            x = torch.cat([state, action], 2)
+        elif len(state.shape)==2:
+            x = torch.cat([state, action], 1)
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
@@ -291,7 +294,11 @@ class Agent():
         Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states)
         next_Q = self.critic_target.forward(next_states, next_actions)
+        if len(next_Q.shape)==3:
+            next_Q=torch.reshape(next_Q, (128,1,8))
         Qprime = rewards + (done* torch.pow(self.gamma,steps) *next_Q).detach()
+        if len(Qprime.shape)==3:
+            Qprime=Qprime.sum(axis=2)/torch.count_nonzero(Qprime, dim=2) 
         critic_loss = self.critic_criterion(Qvals, Qprime)
 
         # Actor loss

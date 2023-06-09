@@ -213,8 +213,14 @@ def save_to_buffer(agent,episode_memory,short=False):
             step+=1
             steps.append(step)
             rewards.append(reward)
-            
-        
+
+
+        while len(states)<8:
+            states.append(episode_memory[i][0])
+            rewards.append(0)
+            steps.append(0)
+            dones.append(1)
+                    
         # append to memory
         if not short:
             agent.memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
