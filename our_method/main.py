@@ -19,7 +19,7 @@ from general.simple_estimator import SEstimator
 
 
 
-# current version: one step TD for all samples
+# current version: Two buffers with FIFO
 
 
 #hyper params
@@ -162,31 +162,33 @@ def exploration(density):
     all=visits.shape[0]*visits.shape[1]
     return covered/all
 
-# main method to do updates
-# def save_to_buffer(agent,episode_memory,short=False):
-   
-#     episode_next_state=episode_memory[-1][3]
-#     episode_done=episode_memory[-1][4]
 
-#     # This is a successful trajectory: MC update
-#     if episode_done:
-#         G=0
-#         for entry in reversed(episode_memory):
-#             G=entry[2]+agent.gamma*G
-#             if not short:
-#                 agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
-#             else:
-#                 agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
+# main method to do updates
+def save_to_buffer(agent,episode_memory,short=False):
+   
+    episode_next_state=episode_memory[-1][3]
+    episode_done=episode_memory[-1][4]
+
+    # This is a successful trajectory: MC update
+    if episode_done:
+        G=0
+        for entry in reversed(episode_memory):
+            G=entry[2]+agent.gamma*G
+            if not short:
+                agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
+            else:
+                agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
     
 
-#     # This is an unsuccessful trajectory: longest n-step return
-#     else:
-#         i=0
-#         G=0
-#         for entry in reversed(episode_memory):
-#             G=entry[2]+agent.gamma*G
-#             agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
-#             i+=1
+    # This is an unsuccessful trajectory: longest n-step return
+    else:
+        i=0
+        G=0
+        for entry in reversed(episode_memory):
+            G=entry[2]+agent.gamma*G
+            agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
+            i+=1
+
 
 # This is used for one-step TD update
 # def save_to_buffer(agent,episode_memory,short=False):
@@ -198,34 +200,34 @@ def exploration(density):
 
 
 # This is used for average of first 8-step TD updates
-def save_to_buffer(agent,episode_memory,short=False):
-    for i in range(len(episode_memory)):
-        states=[]
-        rewards=[]
-        steps=[]
-        dones=[]
-        reward=0
-        step=0
-        for j in range(i,min(len(episode_memory),i+8)):
-            states.append(episode_memory[j][3])
-            dones.append(episode_memory[j][4])
-            reward+=math.pow(agent.gamma,step)*episode_memory[j][2]
-            step+=1
-            steps.append(step)
-            rewards.append(reward)
+# def save_to_buffer(agent,episode_memory,short=False):
+#     for i in range(len(episode_memory)):
+#         states=[]
+#         rewards=[]
+#         steps=[]
+#         dones=[]
+#         reward=0
+#         step=0
+#         for j in range(i,min(len(episode_memory),i+8)):
+#             states.append(episode_memory[j][3])
+#             dones.append(episode_memory[j][4])
+#             reward+=math.pow(agent.gamma,step)*episode_memory[j][2]
+#             step+=1
+#             steps.append(step)
+#             rewards.append(reward)
 
 
-        while len(states)<8:
-            states.append(episode_memory[i][0])
-            rewards.append(0)
-            steps.append(0)
-            dones.append(1)
+#         while len(states)<8:
+#             states.append(episode_memory[i][0])
+#             rewards.append(0)
+#             steps.append(0)
+#             dones.append(1)
                     
-        # append to memory
-        if not short:
-            agent.memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
-        else:
-            agent.short_memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
+#         # append to memory
+#         if not short:
+#             agent.memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
+#         else:
+#             agent.short_memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
         
 
 

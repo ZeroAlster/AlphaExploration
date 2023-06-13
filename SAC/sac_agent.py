@@ -3,11 +3,10 @@ from stable_baselines3.common.callbacks import BaseCallback
 from general.maze import Env
 import math
 import gym
-
+import sys
 
 #hyper params
 ######################################
-max_steps   = 100
 evaluation_attempts=10
 ######################################
 
@@ -29,8 +28,8 @@ class CustomCallback(BaseCallback):
         self.goal=[8.8503,9.1610]
         self.threshold=0.15
         if self.environment=="point":
-            self.len_episode=1000
-            self.goal=[0,8]
+            self.len_episode=500
+            self.goal=[0,16]
             self.threshold=0.6
         self.success=0
 
@@ -45,18 +44,17 @@ class CustomCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         
-        if self.num_timesteps % self.len_episode== self.len_episode-1:
-            self.locations.append(self.locals["new_obs"])
+        if self.locals["done"]:
+            if math.sqrt(math.pow(self.locals["infos"][0]["terminal_observation"][0]-self.goal[0],2)+
+                         math.pow(self.locals["infos"][0]["terminal_observation"][1]-self.goal[1],2))<=self.threshold:
+                self.success+=1
+            self.locations.append(self.locals["infos"][0]["terminal_observation"])
         
-        if math.sqrt(math.pow(self.locals["new_obs"][0][0]-self.goal[0],2)+math.pow(self.locals["new_obs"][0][1]-self.goal[1],2))<=self.threshold:
-            self.success+=1
-            self.locations.append(self.locals["new_obs"])
-            print("hooora!!!!")
         
         if self.num_timesteps % self.checkpoint==0:
             print("next checkpoint: "+str(self.num_timesteps)+"  steps")
             
-            env=Env(n=max_steps,maze_type='square_large')
+            env=Env(n=self.len_episode,maze_type='square_large')
             if self.environment=="point":
                 env = gym.make("PointUMaze-v1")
             

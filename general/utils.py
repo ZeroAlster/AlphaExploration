@@ -13,24 +13,24 @@ from matplotlib.font_manager import FontProperties
 # success1=[]
 # success2=[]
 # success3=[]
-# address1="our_method/results"
-# address2="our_method/results_with_CER"
-# address3="our_method/results_with_one_buffer"
+# address1="our_method/results/maze/full"
+# address2="our_method/results/maze/update/one_step_TD"
+# address3="our_method/results/maze/update/avg8_step_TD"
 
-# for i in range(10):
+# for i in range(11):
 #     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success1.append(pickle.load(fp))
-# for i in range(13):
+# for i in range(9):
 #     with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success2.append(pickle.load(fp))
-# for i in range(8):
+# for i in range(6):
 #     with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success3.append(pickle.load(fp))
 
 # plt.figure()
 # ax = plt.subplot(111)
 # all_success=[]
-# labels=["two replay buffers","one replay buffer","CER"]
+# labels=["our method","one-step TD","MMDDPG(8-avg)"]
 # colors=["blue","darkorange","green"]
 # all_success.append(success1)
 # all_success.append(success2)
@@ -45,12 +45,11 @@ from matplotlib.font_manager import FontProperties
 
 #     for i in range(number):
 #         values=[]
+#         agents=6
 #         if k==0:
-#             agents=10
+#             agents=11
 #         elif k==1:
-#             agents=13
-#         else:
-#             agents=8
+#             agents=9
 #         for j in range(agents):
 #             values.append(all_success[k][j][i])
 #         mean[0][i]=sum(values)/len(values)
@@ -60,7 +59,7 @@ from matplotlib.font_manager import FontProperties
 #     plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
 
 #     # fix the error bar
-#     std=std*0.75
+#     std=std
 #     down_bar=np.maximum((mean-std)[0,:],0)
 #     up_bar=np.minimum((mean+std)[0,:],1)
 
@@ -71,8 +70,8 @@ from matplotlib.font_manager import FontProperties
 
 # plt.title("success rate")
 # plt.xlabel("checkpoints")
-# ax.legend(loc="lower right",bbox_to_anchor=(1., 0.05),prop=fontP)
-# plt.savefig("general/final_figures/buffers.png")
+# ax.legend(loc="upper left",prop=fontP)
+# plt.savefig("general/final_figures/update.png")
 
 
 
@@ -230,18 +229,18 @@ from matplotlib.font_manager import FontProperties
 
 # print number of successes for each agent
 ######################################
-# num_agent=15
-# for  i in range(num_agent):
-#     with open("our_method/results/results_maze/update_results/one_step_TD/agent"+str(i+1)+"/locations", 'rb') as fp:
-#                 locations=pickle.load(fp)
-#     success=0
-#     for k in range(len(locations)):
-#         location=locations[k][0]
-#         if math.sqrt(math.pow(location[0]-8.8503,2)+math.pow(location[1]-9.1610,2))<=0.15:
-#             success+=1
-#     print("agent"+str(i+1)+":   "+str(success))
-#     print("frames agent"+str(i+1)+":   "+str(len(locations)))
-#     print("*"*30)
+num_agent=10
+for  i in range(num_agent):
+    with open("our_method/results/maze/buffer/Two_FIFO/agent"+str(i+1)+"/locations", 'rb') as fp:
+                locations=pickle.load(fp)
+    success=0
+    for k in range(len(locations)):
+        location=locations[k][0]
+        if math.sqrt(math.pow(location[0]-8.8503,2)+math.pow(location[1]-9.1610,2))<=0.15:
+            success+=1
+    print("agent"+str(i+1)+":   "+str(success))
+    print("frames agent"+str(i+1)+":   "+str(len(locations)))
+    print("*"*30)
 ######################################
 
 

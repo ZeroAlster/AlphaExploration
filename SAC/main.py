@@ -20,7 +20,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 #hyper params
 ######################################
 replay_buffer_size = 1e6
-max_frames  = 6e6
+max_frames  = 10e6
 learning_rate=3e-4
 max_steps   = 100
 batch_size  = 128
@@ -74,8 +74,8 @@ def main(address,environment):
         sigma=0.2 * np.ones(2)
     elif environment=="point":
         env=gym.make("PointUMaze-v1")
-        sigma=np.ones(2)* 0.2
-        sigma[1]=sigma[1]/4
+        sigma=np.ones(2)* 0.4
+        sigma[1]=sigma[1]/8
     else:
         sys.exit("environment is not valid")
     

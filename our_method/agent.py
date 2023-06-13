@@ -50,8 +50,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -126,6 +126,7 @@ class Critic(nn.Module):
             x = torch.cat([state, action], 2)
         elif len(state.shape)==2:
             x = torch.cat([state, action], 1)
+            
         x = F.relu(self.linear1(x))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
