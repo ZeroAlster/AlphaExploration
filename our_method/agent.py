@@ -10,6 +10,11 @@ from general.simple_estimator import SEstimator
 from torch.autograd import Variable
 import math
 import sys
+import gym 
+import mujoco_maze  # noqa
+import mujoco_maze.maze_env
+
+
 
 #hyper params
 ######################################
@@ -50,8 +55,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        # if self.hit % self.shuffle_interval==0:
-        #     random.shuffle(self.buffer)    
+        if self.hit % self.shuffle_interval==0:
+            random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -131,7 +136,6 @@ class Critic(nn.Module):
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
         x = self.linear4(x)
-
         return x
     
 
@@ -158,13 +162,12 @@ class Actor(nn.Module):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
-        x = torch.tanh(self.linear4(x))*self.action_range
-
-        return x
+        x = torch.tanh(self.linear4(x))*torch.tensor((self.action_range[0],self.action_range[1]),device="cuda")
+        return x.float()
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
+    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
         
         # Params
         self.num_actions = num_actions
@@ -175,6 +178,8 @@ class Agent():
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
         self.short_memory_updates=0
+        self.simulator=environment
+        self.threshold=threshold
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -195,7 +200,7 @@ class Agent():
             target_param.data.copy_(param.data)
 
         # Training, density estimator, memory, and path_array
-        self.density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
+        self.density_estimator=density_estimator
         self.memory = Memory(memory_size)
         self.short_memory=Memory(short_memory_size)        
         self.critic_criterion  = nn.MSELoss()
@@ -203,13 +208,38 @@ class Agent():
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
 
     
+    def neighbour(self,state,goal):
+        if math.sqrt(math.pow(state[0]-goal[0],2)+math.pow(state[1]-goal[1],2))<=self.threshold:
+            return True
+        else:
+            return False
+        
+    def step(self,env,node,action):
+
+        if self.simulator=="maze":
+            env._state['state']=env.to_tensor(node.coordination[0:2])
+            new_coordination,_,_,_=env.step(action)
+        elif self.simulator=="point":
+            new_coordination,_,_,_=env.planning_step(node.coordination,action)
+        else:
+            sys.exit("wrong simulator!")
+        return new_coordination
+
+
     def RRT(self,coordination):
         nodes=[]
         root=Node(None,coordination)
         nodes.append(root)
-        env=Env(n=max_steps,maze_type='square_large')
         goal=root
 
+
+        # define the simulator
+        if self.simulator=="maze":
+            env=Env(n=max_steps,maze_type='square_large')
+        elif self.simulator=="point":
+            env=gym.make("PointUMaze-v1")
+        else:
+            sys.exit("simulator is not valid.")
         
         # create the grapgh
         for _ in range(RRT_budget):
@@ -217,15 +247,16 @@ class Agent():
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
             action=np.random.uniform(-self.action_range,self.action_range,size=(2,))
-            env._state['state']=env.to_tensor(node.coordination[0:2])
-            new_coordination,_,_,_=env.step(action)
+            
+            # find the next state
+            new_coordination=self.step(env,node,action)    
             
             # creating the new node and adding it to the tree
             child=Node((node,action),new_coordination)
             nodes.append(child)
 
             # check if we hit the goal
-            if env.is_success:
+            if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
                 goal=child
                 break
 
@@ -248,6 +279,7 @@ class Agent():
         while node.parent is not None:
             option.append(node.parent[1])
             node=node.parent[0]
+        
         return option    
     
     
