@@ -71,7 +71,7 @@ def plot(address,success_rates,locations,num_agents):
         locations_y=[]
         for destination in locations[i]:
 
-            sample=destination[0:2]
+            sample=destination[0][0:2]
             locations_x.append(sample[0])
             locations_y.append(sample[1])
             
