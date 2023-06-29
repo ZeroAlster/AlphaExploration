@@ -12,6 +12,8 @@ from general.simple_estimator import minimum_visit
 import torch
 import os
 from general.simple_estimator import SEstimator
+import gym
+import mujoco_maze #noqa
 
 
 #hyper params
@@ -133,8 +135,12 @@ def plot(address,locations,success_rates,explorations):
     plt.close("all")
     
 
-def evaluation(agent):
-    env_test=Env(n=max_steps,maze_type='square_large')
+def evaluation(agent,environment):
+    if environment=="maze":
+        env_test=Env(n=max_steps,maze_type='square_large')
+    else:
+        env_test=gym.make("PointUMaze-v1")
+    
     success=0
     for _ in range(evaluation_attempts):
         obs = env_test.reset()
@@ -142,15 +148,24 @@ def evaluation(agent):
         while not done:
             action = agent.get_action(obs,evaluation=True)[0]
             obs,_, done,_= env_test.step(action)
-        if env_test.is_success:
+        if agent.neighbour(obs[0:2],obs[-2:]):
             success+=1
     
     return success/evaluation_attempts
 
 
 def exploration(density):
-    min_val=1000
+    
     visits=np.copy(density.visits)-minimum_visit
+    
+    # define minimum visit to each cell
+    if visits.shape[0]==20:
+        min_val=1000
+    elif visits.shape[0]==40:
+        min_val=250
+    else:
+        sys.exit("wrong shape for density estimator")
+    
     covered=(visits>=min_val).sum()
     all=visits.shape[0]*visits.shape[1]
     return covered/all
@@ -163,7 +178,7 @@ def save_to_buffer(agent,episode_memory):
         agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
 
 
-def train(agent,env,address):
+def train(agent,env,address,environment):
     
     #define variables for plotting
     destinations=[]
@@ -171,7 +186,8 @@ def train(agent,env,address):
     env_coverages=[]
 
     # define an estimator for the exploration curve
-    env_density=SEstimator(0.5,10,10,[-0.5,-0.5])
+    density_height=env.observation_space.high[0]-env.observation_space.low[0]
+    env_density=SEstimator(0.5,density_height,density_height,[env.observation_space.low[0],env.observation_space.low[1]])
 
     
     # warmup period
@@ -185,7 +201,7 @@ def train(agent,env,address):
             option = agent.get_action(state)
             for action in option:
                 next_state, reward, done, _ = env.step(action)
-                episode_memory.append([state, action, reward, next_state, np.float(env.is_success)])
+                episode_memory.append([state, action, reward, next_state, np.float(agent.neighbour(next_state[0:2],next_state[-2:]))])
                 state=next_state
                 
                 # env density update
@@ -225,7 +241,7 @@ def train(agent,env,address):
             option = agent.get_action(state)
             for action in option:
                 next_state, reward, done, _ = env.step(action)
-                episode_memory.append([state, action, reward, next_state, np.float(env.is_success)])
+                episode_memory.append([state, action, reward, next_state, np.float(agent.neighbour(next_state[0:2],next_state[-2:]))])
                 state=next_state
 
                 # env density update
@@ -238,7 +254,7 @@ def train(agent,env,address):
                 frame+=1
                 if frame % checkpoints_interval==0:
                     print("next checkpoint: "+str(frame)+"  steps")
-                    success_rates.append(evaluation(agent))
+                    success_rates.append(evaluation(agent,environment))
                     env_coverages.append(exploration(env_density))
                 
                 # check if episode is done
@@ -274,22 +290,27 @@ def train(agent,env,address):
 
 def main(address,environment):
     # initiate the environment, get action and state space size, and get action range
-    if environment =="Pendulum":
-        pass
+    if environment =="point":
+        env=gym.make("PointUMaze-v1")
+        num_actions=env.action_space.shape[0]
+        num_states=env.observation_space.shape[0]
+        action_range=np.array((1,0.25))
+        threshold=0.6
     elif environment=="maze":
         env=Env(n=max_steps,maze_type='square_large')
         num_actions = env.action_size
         num_states  = env.state_size*2
         action_range=env.action_range
+        threshold=0.15
     else:
         sys.exit("The environment does not exist!")
 
     
     # initiate the agent
-    agent=Agent(num_actions,num_states,action_range)
+    agent=Agent(num_actions,num_states,action_range,threshold)
     
     # train the agent
-    train(agent,env,address)
+    train(agent,env,address,environment)
 
 
 if __name__ == '__main__':
@@ -297,12 +318,11 @@ if __name__ == '__main__':
     parser.add_argument('-a','--address',required=True)
     parser.add_argument('-t','--task',required=True)
     parser.add_argument('-e','--environment',required=True)
-    parser.add_argument('-s','--seed',required=True)
     args = parser.parse_args()
 
     
     # set random seeds
-    seed=int(args.seed)
+    seed=random.randint(0,100)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True

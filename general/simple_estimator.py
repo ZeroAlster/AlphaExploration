@@ -22,7 +22,7 @@ class SEstimator:
         prob=(self.visits[cell_x][cell_y])/np.sum(self.visits)
         return prob
 
-    def increment(self,coordination):
+    def increment(self,coordination,increment=1):
         cell_x=math.floor((coordination[0]-self.env_start[0])/self.cell_side)
         cell_y=math.floor((coordination[1]-self.env_start[1])/self.cell_side)
         
@@ -31,7 +31,7 @@ class SEstimator:
         cell_y=min(cell_y,self.visits.shape[1]-1)
         cell_y=max(cell_y,0)
 
-        self.visits[cell_x][cell_y]+=1
+        self.visits[cell_x][cell_y]+=increment
 
         
 

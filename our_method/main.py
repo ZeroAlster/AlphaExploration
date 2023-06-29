@@ -21,7 +21,7 @@ from general.simple_estimator import SEstimator
 
 
 
-# current version: main version
+# current version: one-step epsilon-greedy
 
 
 #hyper params
@@ -30,7 +30,7 @@ max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
-num_agents=9
+num_agents=10
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
@@ -67,7 +67,8 @@ def plot(address,locations,success_rates,explorations):
 
 
     #plot the exploration curves
-    number=100
+    #number=100
+    number=len(explorations[0])
     std=np.zeros((1,number))
     mean=np.zeros((1,number))
     horizon=np.zeros((1,number))

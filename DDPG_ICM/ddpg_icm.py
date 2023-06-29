@@ -6,8 +6,9 @@ import numpy as np
 import random
 import torch.optim as optim
 from torch.autograd import Variable
-from general.simple_estimator import SEstimator
 import math
+import sys
+
 
 
 #hyper params
@@ -20,13 +21,13 @@ max_steps= 100
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-noise_scale=0.35
+#noise_scale=(0.2,0.2)
+noise_scale=(0.4,0.05)
 ######################################
 
 
 # cpu or gpu
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 
 class Memory:
     def __init__(self, max_size):
@@ -40,8 +41,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -97,6 +98,7 @@ class Critic(nn.Module):
 class Actor(nn.Module):
     def __init__(self, input_size, hidden_size, output_size,action_range):
         super(Actor, self).__init__()
+
         self.linear1 = nn.Linear(input_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
         self.linear3 = nn.Linear(hidden_size, hidden_size)
@@ -111,13 +113,12 @@ class Actor(nn.Module):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
-        x = torch.tanh(self.linear4(x))*self.action_range
-
-        return x
+        x = torch.tanh(self.linear4(x))*torch.tensor((self.action_range[0],self.action_range[1]),device="cuda")
+        return x.float()
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,beta,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size)):
+    def __init__(self,num_actions,num_states,action_range,density_estimator,threshold,beta,increment,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size)):
         
         # Params
         self.num_actions = num_actions
@@ -126,7 +127,9 @@ class Agent():
         self.tau = tau
         self.action_range=action_range
         self.noise_scale=noise_scale
+        self.threshold=threshold
         self.beta=beta
+        self.increment=increment
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -147,8 +150,8 @@ class Agent():
             target_param.data.copy_(param.data)
 
         # Training, and memory
-        self.memory = Memory(memory_size)  
-        self.density_estimator=SEstimator(0.5,10,10,[-0.5,-0.5])      
+        self.memory = Memory(memory_size)
+        self.density_estimator=density_estimator        
         self.critic_criterion  = nn.MSELoss()
         self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
@@ -163,24 +166,29 @@ class Agent():
         
         # adding noise to the action if it is not evaluation
         if not evaluation:
-            noise=np.random.normal(0, self.noise_scale, size=self.num_actions).clip(-self.action_range, self.action_range)
+            noise=np.ones(2)
+            noise[0]=np.random.normal(0, self.noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
+            noise[1]=np.random.normal(0, self.noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
             action=np.clip(action+noise,-self.action_range, self.action_range)
 
         option=[action]
 
         return option
     
-    
+    def neighbour(self,state,goal):
+        if math.sqrt(math.pow(state[0]-goal[0],2)+math.pow(state[1]-goal[1],2))<=self.threshold:
+            return True
+        else:
+            return False
     
     def bonus_cal(self,states):
         bonus=[]
         for state in states:
             cell_x,cell_y=self.point_to_cell(state)
             intrinsic=self.beta/(math.sqrt(self.density_estimator.visits[cell_x][cell_y]))
-            bonus.append([min(intrinsic,10)])
-
+            bonus.append([min(intrinsic,1)])
+        
         return bonus
-    
     
     def update(self, batch_size):
         
@@ -188,8 +196,7 @@ class Agent():
 
         # bonus calculation
         bonus=self.bonus_cal(states)
-        
-        # convert to torch tensors
+
         states = torch.FloatTensor(np.array(states)).to(device)
         actions = torch.FloatTensor(np.array(actions)).to(device)
         rewards = torch.FloatTensor(np.array(rewards)).to(device)
@@ -197,12 +204,12 @@ class Agent():
         next_states = torch.FloatTensor(np.array(next_states)).to(device)
         done=torch.FloatTensor(np.array([1-i for i in done])).to(device)
         steps=torch.FloatTensor(np.array(steps)).to(device)
-
+        
         # Critic loss        
         Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states)
         next_Q = self.critic_target.forward(next_states, next_actions)
-        Qprime = rewards+bonus+ (done* torch.pow(self.gamma,steps) *next_Q).detach()
+        Qprime = rewards + bonus+ (done* torch.pow(self.gamma,steps) *next_Q).detach()
         critic_loss = self.critic_criterion(Qvals, Qprime)
 
         # Actor loss
@@ -223,7 +230,7 @@ class Agent():
        
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-    
+
 
     def point_to_cell(self,coordination):
         cell_x=math.floor((coordination[0]-self.density_estimator.env_start[0])/self.density_estimator.cell_side)

@@ -6,7 +6,7 @@ import numpy as np
 import random
 import torch.optim as optim
 from torch.autograd import Variable
-
+import math
 #hyper params
 ######################################
 replay_buffer_size = 1e6
@@ -17,7 +17,8 @@ max_steps= 100
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-noise_scale=0.35
+#noise_scale=(0.2,0.2)
+noise_scale=(0.4,0.05)
 ######################################
 
 
@@ -37,8 +38,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -108,13 +109,12 @@ class Actor(nn.Module):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
-        x = torch.tanh(self.linear4(x))*self.action_range
-
-        return x
+        x = torch.tanh(self.linear4(x))*torch.tensor((self.action_range[0],self.action_range[1]),device="cuda")
+        return x.float()
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size)):
+    def __init__(self,num_actions,num_states,action_range,threshold,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size)):
         
         # Params
         self.num_actions = num_actions
@@ -123,6 +123,7 @@ class Agent():
         self.tau = tau
         self.action_range=action_range
         self.noise_scale=noise_scale
+        self.threshold=threshold
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -158,13 +159,20 @@ class Agent():
         
         # adding noise to the action if it is not evaluation
         if not evaluation:
-            noise=np.random.normal(0, self.noise_scale, size=self.num_actions).clip(-self.action_range, self.action_range)
+            noise=np.ones(2)
+            noise[0]=np.random.normal(0, self.noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
+            noise[1]=np.random.normal(0, self.noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
             action=np.clip(action+noise,-self.action_range, self.action_range)
 
         option=[action]
 
         return option
     
+    def neighbour(self,state,goal):
+        if math.sqrt(math.pow(state[0]-goal[0],2)+math.pow(state[1]-goal[1],2))<=self.threshold:
+            return True
+        else:
+            return False
     
     def update(self, batch_size):
         

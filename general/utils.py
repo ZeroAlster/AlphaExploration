@@ -249,7 +249,7 @@ from matplotlib.font_manager import FontProperties
 ######################################
 num_agent=10
 for  i in range(num_agent):
-    with open("our_method/results/mujoco/full/agent"+str(i+1)+"/locations", 'rb') as fp:
+    with open("DDPG_ICM/results/mujoco/agent"+str(i+1)+"/locations", 'rb') as fp:
                 locations=pickle.load(fp)
     success=0
     for k in range(len(locations)):

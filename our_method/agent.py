@@ -288,10 +288,10 @@ class Agent():
         if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
             
             # we will output an option by RRT or a random action
-            option= self.RRT(state)
+            #option= self.RRT(state)
 
             # to see the impact of rrt exploration 
-            # option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
+            option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
         else:
             #get a primitive action from the network
             state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
