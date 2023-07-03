@@ -51,7 +51,7 @@ def plot(address,success_rates,locations,explorations,num_agents):
 
     #plot the exploration curves
     #number=100
-    number=len(explorations[7])
+    number=len(explorations[0])
     std=np.zeros((1,number))
     mean=np.zeros((1,number))
     horizon=np.zeros((1,number))

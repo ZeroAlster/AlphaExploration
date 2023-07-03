@@ -21,7 +21,7 @@ from general.simple_estimator import SEstimator
 
 
 
-# current version: one-step epsilon-greedy
+# current version: noisy action all the time
 
 
 #hyper params
