@@ -12,6 +12,13 @@ import sys
 
 
 
+def neighbour(state,goal):
+        if math.sqrt(math.pow(state[0]-goal[0],2)+math.pow(state[1]-goal[1],2))<=0.6:
+            return True
+        else:
+            return False
+
+
 def plot(address,success_rates,locations,explorations,num_agents):
     
     # plot success rates for each agent
@@ -51,12 +58,10 @@ def plot(address,success_rates,locations,explorations,num_agents):
 
     #plot the exploration curves
     #number=100
-    number=len(explorations[0])
+    number=len(explorations[7])
     std=np.zeros((1,number))
     mean=np.zeros((1,number))
     horizon=np.zeros((1,number))
-    
-    # print(len(explorations[7]))
 
     for i in range(number):
         values=[]
@@ -96,17 +101,48 @@ def plot(address,success_rates,locations,explorations,num_agents):
         _, ax = plt.subplots()
         for wall in walls:
             ax.add_patch(Rectangle((wall[0][0], wall[0][1]), wall[1][0], wall[1][1],facecolor="dimgrey"))
-        ax.add_patch(Circle(point[0], radius=point[1], facecolor='magenta'))
-        ax.add_patch(Circle(goal[0], radius=goal[1], facecolor='darkorange'))
+        #ax.add_patch(Circle(point[0], radius=point[1], facecolor='magenta'))
+        #ax.add_patch(Circle(goal[0], radius=goal[1], facecolor='darkorange'))
 
         locations_x=[]
         locations_y=[]
+        goals=[]
+        sampler=[]
         for destination in locations[i]:
 
-            sample=destination[0][0:2]
-            locations_x.append(sample[0])
-            locations_y.append(sample[1])
+            # if destination[1]>2e6:
+            #     continue
+
+            if  neighbour(destination[0][0:2],destination[0][-2:]):
+                sample=destination[0][0:2]
+                goals.append(sample)    
             
+            else:
+                sample=destination[0][0:2]
+                sampler.append(sample)
+                
+            
+            if len(sampler)==10:
+                sample=random.choice(sampler)
+                locations_x.append(sample[0])
+                locations_y.append(sample[1])
+                sampler=[]
+        
+        print(i)
+        print(len(locations_x))
+        print(len(goals))
+        #samples=random.sample(samples,4000)
+
+
+        goals=random.sample(goals,30)
+        for goal in goals:
+            locations_x.append(goal[0])
+            locations_y.append(goal[1])
+
+        print(len(locations_x))
+        print("*"*40)
+
+
         # plot the locations
         colors=[]
         for k in range(len(locations_x)):
