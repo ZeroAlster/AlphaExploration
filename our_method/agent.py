@@ -13,7 +13,8 @@ import sys
 import gym 
 import mujoco_maze  # noqa
 import mujoco_maze.maze_env
-
+import tempfile
+import os
 
 
 #hyper params
@@ -56,8 +57,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -281,53 +282,58 @@ class Agent():
             option.append(node.parent[1])
             node=node.parent[0]
         
+        
+        # removing extra files
+        os.remove(env.file_path)
+
+
         return option    
     
     
     # main function
-    # def get_action(self, state,warmup,evaluation=False):
-        
-    #     if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
-            
-    #         # we will output an option by RRT or a random action
-    #         #option= self.RRT(state)
-
-    #         # to see the impact of rrt exploration 
-    #         option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
-    #     else:
-    #         #get a primitive action from the network
-    #         state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-    #         action = self.actor.forward(state)
-    #         action = action.cpu().detach().numpy().flatten()
-    #         option=[action]
-        
-    #     # reverse the option
-    #     option.reverse()
-
-    #     # update the epsilon
-    #     if self.epsilon> minimum_exploration:
-    #         self.epsilon=self.epsilon*self.epsilon_decay
-
-    #     return option
-
-    # noisy action
     def get_action(self, state,warmup,evaluation=False):
         
-        #get a primitive action from the network
-        state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-        action = self.actor.forward(state)
-        action = action.cpu().detach().numpy().flatten()
-        
-        # adding noise to the action if it is not evaluation
-        if not evaluation:
-            noise=np.ones(2)
-            noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
-            noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
-            action=np.clip(action+noise,-self.action_range, self.action_range)
+        if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
+            
+            # we will output an option by RRT or a random action
+            option= self.RRT(state)
 
-        option=[action]
+            # to see the impact of rrt exploration 
+            #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
+        else:
+            #get a primitive action from the network
+            state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+            action = self.actor.forward(state)
+            action = action.cpu().detach().numpy().flatten()
+            option=[action]
+        
+        # reverse the option
+        option.reverse()
+
+        # update the epsilon
+        if self.epsilon> minimum_exploration:
+            self.epsilon=self.epsilon*self.epsilon_decay
 
         return option
+
+    # noisy action
+    # def get_action(self, state,warmup,evaluation=False):
+        
+    #     #get a primitive action from the network
+    #     state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+    #     action = self.actor.forward(state)
+    #     action = action.cpu().detach().numpy().flatten()
+        
+    #     # adding noise to the action if it is not evaluation
+    #     if not evaluation:
+    #         noise=np.ones(2)
+    #         noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
+    #         noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
+    #         action=np.clip(action+noise,-self.action_range, self.action_range)
+
+    #     option=[action]
+
+    #     return option
     
     
     def update(self, batch_size,update_number):

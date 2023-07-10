@@ -11,6 +11,7 @@ from scipy.interpolate import make_interp_spline
 from matplotlib.font_manager import FontProperties
 
 
+
 # success1=[]
 # success2=[]
 # success3=[]
@@ -96,135 +97,48 @@ from matplotlib.font_manager import FontProperties
 
 # plot the success rates for the paper
 ######################################
-# success1=[]
-# success2=[]
-# success3=[]
-# success4=[]
-# success5=[]
-# success6=[]
-# address1="DDPG/results/mujoco"
-# address2="DDPG_HER/results/mujoco"
-# address3="DDPG_ICM/results/mujoco"
-# address4="our_method/results/mujoco/full"
-# address5="SAC/results/mujoco"
-# address6="DDPG_temporal/results/mujoco"
+success1=[]
+success2=[]
+success3=[]
+address1="our_method/results/maze/update/one-step-TD"
+address2="our_method/results/maze/update/avg8-step-TD"
+address3="our_method/results/maze/full"
 
-# for i in range(10):
-#     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success1.append(pickle.load(fp))
-# for i in range(10):
-#     with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success2.append(pickle.load(fp))
-# for i in range(10):
-#     with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success3.append(pickle.load(fp))
-# for i in range(10):
-#     with open(address4+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success4.append(pickle.load(fp))
-# for i in range(10):
-#     with open(address5+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success5.append(pickle.load(fp))
-# for i in range(10):
-#     with open(address6+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success6.append(pickle.load(fp))
-
-# plt.figure()
-# ax = plt.subplot(111)
-# all_success=[]
-# labels=["DDPG","DDPG + HER","DDPG + intrinsic motivation","our method","SAC","DDPG + \u03B5z-Greedy "]
-# colors=["blue","darkorange","green","purple","aqua","red"]
-# all_success.append(success1)
-# all_success.append(success2)
-# all_success.append(success3)
-# all_success.append(success4)
-# all_success.append(success5)
-# all_success.append(success6)
-
-
-# for k in range(6):
-#     number=len(all_success[0][0])
-#     std=np.zeros((1,number))
-#     mean=np.zeros((1,number))
-#     horizon=np.zeros((1,number))
-
-#     for i in range(number):
-#         values=[]
-#         agents=10
-#         for j in range(agents):
-#             values.append(all_success[k][j][i])
-#         mean[0][i]=sum(values)/len(values)
-#         std[0][i]=statistics.pstdev(values)
-#         horizon[0][i]=i
-    
-#     plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k])
-
-#     # fix the error bar
-#     std=std
-#     down_bar=np.maximum((mean-std)[0,:],0)
-#     up_bar=np.minimum((mean+std)[0,:],1)
-
-#     plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
-
-# fontP = FontProperties()
-# fontP.set_size('x-small')
-
-# plt.title("success rate")
-# plt.xlabel("checkpoints")
-# #ax.legend(loc="upper left",prop=fontP)
-# plt.savefig("general/final_figures/mujoco/success_rates.png")
-#####################################
-
-
-# plot environment coverage for the paper
-# #####################################
-explorations1=[]
-explorations2=[]
-explorations3=[]
-explorations4=[]
-address1="DDPG_ICM/results/mujoco"
-address2="DDPG_temporal/results/mujoco/full"
-address3="DDPG/results/mujoco"
-address4="our_method/results/mujoco/full"
-
-for i in range(10):
-    with open(address1+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations1.append(pickle.load(fp))
-for i in range(10):
-    with open(address2+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations2.append(pickle.load(fp))
-for i in range(10):
-    with open(address3+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations3.append(pickle.load(fp))
-for i in range(10):
-    with open(address4+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations4.append(pickle.load(fp))
+for i in range(9):
+    with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success1.append(pickle.load(fp))
+for i in range(6):
+    with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success2.append(pickle.load(fp))
+for i in range(11):
+    with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success3.append(pickle.load(fp))
 
 plt.figure()
 ax = plt.subplot(111)
-explorations=[]
-labels=["DDPG + intrinsic motivation","DDPG + \u03B5z-Greedy ","DDPG","our method"]
-colors=["blue","darkorange","green","purple"]
-explorations.append(explorations1)
-explorations.append(explorations2)
-explorations.append(explorations3)
-explorations.append(explorations4)
+all_success=[]
+labels=["one-step TD","avg8-step","longest-step"]
+colors=["blue","darkorange","green"]
+all_success.append(success1)
+all_success.append(success2)
+all_success.append(success3)
 
-for k in range(4):
-    number=len(explorations[0][0])
+
+for k in range(3):
+    number=len(all_success[k][2])
     std=np.zeros((1,number))
     mean=np.zeros((1,number))
     horizon=np.zeros((1,number))
 
     for i in range(number):
         values=[]
-        agents=10
-        # if k==2:
-        #     agents=10
-        # elif k==3:
-        #      agents=11 
-
+        agents=9
+        if k==1:
+            agents=6
+        elif k==2:
+            agents=11
         for j in range(agents):
-            values.append(explorations[k][j][i]*(25/17))
+            values.append(all_success[k][j][i])
         mean[0][i]=sum(values)/len(values)
         std[0][i]=statistics.pstdev(values)
         horizon[0][i]=i
@@ -232,15 +146,88 @@ for k in range(4):
     plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
 
     # fix the error bar
+    std=std
     down_bar=np.maximum((mean-std)[0,:],0)
     up_bar=np.minimum((mean+std)[0,:],1)
 
     plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
 
-plt.title("environment coverage")
+fontP = FontProperties()
+fontP.set_size('x-small')
+
+plt.title("success rate")
 plt.xlabel("checkpoints")
-ax.legend(loc="lower right")
-plt.savefig("general/final_figures/mujoco/env_coverage.png")
+ax.legend(loc="lower right",prop=fontP)
+plt.savefig("general/final_figures/maze/update.png")
+#####################################
+
+
+# plot environment coverage for the paper
+# #####################################
+# explorations1=[]
+# explorations2=[]
+# explorations3=[]
+# explorations4=[]
+# address1="DDPG_ICM/results/mujoco"
+# address2="DDPG_temporal/results/mujoco/full"
+# address3="DDPG/results/mujoco"
+# address4="our_method/results/mujoco/full"
+
+# for i in range(10):
+#     with open(address1+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+#             explorations1.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address2+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+#             explorations2.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address3+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+#             explorations3.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address4+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+#             explorations4.append(pickle.load(fp))
+
+# plt.figure()
+# ax = plt.subplot(111)
+# explorations=[]
+# labels=["DDPG + intrinsic motivation","DDPG + \u03B5z-Greedy ","DDPG","our method"]
+# colors=["blue","darkorange","green","purple"]
+# explorations.append(explorations1)
+# explorations.append(explorations2)
+# explorations.append(explorations3)
+# explorations.append(explorations4)
+
+# for k in range(4):
+#     number=len(explorations[0][0])
+#     std=np.zeros((1,number))
+#     mean=np.zeros((1,number))
+#     horizon=np.zeros((1,number))
+
+#     for i in range(number):
+#         values=[]
+#         agents=10
+#         # if k==2:
+#         #     agents=10
+#         # elif k==3:
+#         #      agents=11 
+
+#         for j in range(agents):
+#             values.append(explorations[k][j][i]*(25/17))
+#         mean[0][i]=sum(values)/len(values)
+#         std[0][i]=statistics.pstdev(values)
+#         horizon[0][i]=i
+    
+#     plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
+
+#     # fix the error bar
+#     down_bar=np.maximum((mean-std)[0,:],0)
+#     up_bar=np.minimum((mean+std)[0,:],1)
+
+#     plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
+
+# plt.title("environment coverage")
+# plt.xlabel("checkpoints")
+# ax.legend(loc="lower right")
+# plt.savefig("general/final_figures/mujoco/env_coverage.png")
 # ######################################
 
 

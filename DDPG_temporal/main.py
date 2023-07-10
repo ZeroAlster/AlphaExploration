@@ -18,7 +18,7 @@ import mujoco_maze #noqa
 
 #hyper params
 ######################################
-max_frames  = 6e6
+max_frames  = 1.5e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10

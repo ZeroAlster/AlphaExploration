@@ -57,7 +57,6 @@ def plot(address,success_rates,locations,explorations,num_agents):
 
 
     #plot the exploration curves
-    #number=100
     number=len(explorations[7])
     std=np.zeros((1,number))
     mean=np.zeros((1,number))
@@ -66,8 +65,6 @@ def plot(address,success_rates,locations,explorations,num_agents):
     for i in range(number):
         values=[]
         for j in range(num_agents):
-            # print(i)
-            # print(j)
             values.append(explorations[j][i]*(25/17))
         mean[0][i]=sum(values)/len(values)
         std[0][i]=statistics.pstdev(values)
