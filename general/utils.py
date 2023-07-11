@@ -12,85 +12,85 @@ from matplotlib.font_manager import FontProperties
 
 
 
-# success1=[]
-# success2=[]
-# success3=[]
-# success4=[]
-# success5=[]
-# address1="our_method/results/maze/full"
-# address2="our_method/results/maze/buffer/One_CER"
-# address3="our_method/results/maze/buffer/One_FIFO"
-# address4="our_method/results/maze/buffer/One_RS"
-# address5="our_method/results/maze/buffer/Two_FIFO"
+success1=[]
+success2=[]
+success3=[]
+success4=[]
+success5=[]
+address1="our_method/results/maze/full"
+address2="our_method/results/maze/buffer/One-CER"
+address3="our_method/results/maze/buffer/One-FIFO"
+address4="our_method/results/maze/buffer/One-RS"
+address5="our_method/results/maze/buffer/Two-FIFO"
 
-# for i in range(11):
-#     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success1.append(pickle.load(fp))
-# for i in range(5):
-#     with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success2.append(pickle.load(fp))
-# for i in range(5):
-#     with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success3.append(pickle.load(fp))
-# for i in range(5):
-#     with open(address4+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success4.append(pickle.load(fp))
-# for i in range(5):
-#     with open(address5+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-#         success5.append(pickle.load(fp))
+for i in range(11):
+    with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success1.append(pickle.load(fp))
+for i in range(5):
+    with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success2.append(pickle.load(fp))
+for i in range(5):
+    with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success3.append(pickle.load(fp))
+for i in range(5):
+    with open(address4+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success4.append(pickle.load(fp))
+for i in range(5):
+    with open(address5+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success5.append(pickle.load(fp))
 
-# plt.figure()
-# ax = plt.subplot(111)
-# all_success=[]
-# labels=["Two-RS","One-CER","One-FIFO","One-RS","Two-FIFO"]
-# colors=["blue","darkorange","green","red","fuchsia"]
-# all_success.append(success1)
-# all_success.append(success2)
-# all_success.append(success3)
-# all_success.append(success4)
-# all_success.append(success5)
+plt.figure()
+ax = plt.subplot(111)
+all_success=[]
+labels=["Two-RS","One-CER","One-FIFO","One-RS","Two-FIFO"]
+colors=["blue","darkorange","green","red","fuchsia"]
+all_success.append(success1)
+all_success.append(success2)
+all_success.append(success3)
+all_success.append(success4)
+all_success.append(success5)
 
 
-# for k in range(5):
-#     number=len(success2[0])
-#     std=np.zeros((1,number))
-#     mean=np.zeros((1,number))
-#     horizon=np.zeros((1,number))
+for k in range(5):
+    number=len(success2[0])
+    std=np.zeros((1,number))
+    mean=np.zeros((1,number))
+    horizon=np.zeros((1,number))
 
-#     for i in range(number):
-#         values=[]
-#         agents=5
-#         if k==0:
-#             agents=11
-#         for j in range(agents):
-#             values.append(all_success[k][j][i])
-#         mean[0][i]=sum(values)/len(values)
-#         std[0][i]=statistics.pstdev(values)
-#         horizon[0][i]=i
+    for i in range(number):
+        values=[]
+        agents=5
+        if k==0:
+            agents=11
+        for j in range(agents):
+            values.append(all_success[k][j][i])
+        mean[0][i]=sum(values)/len(values)
+        std[0][i]=statistics.pstdev(values)
+        horizon[0][i]=i
     
-#     # smoothing the plots
-#     X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
-#     X_ = np.linspace(horizon.min(), horizon.max(), 500)
-#     Y_ = X_Y_Spline(X_)
-#     plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
+    # smoothing the plots
+    X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
+    X_ = np.linspace(horizon.min(), horizon.max(), 500)
+    Y_ = X_Y_Spline(X_)
+    plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
     
     
-#     #plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
+    #plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
 
-#     # fix the error bar
-#     std=std
-#     down_bar=np.maximum((mean-std)[0,:],0)
-#     up_bar=np.minimum((mean+std)[0,:],1)
+    # fix the error bar
+    std=std*0.75
+    down_bar=np.maximum((mean-std)[0,:],0)
+    up_bar=np.minimum((mean+std)[0,:],1)
 
-#     #plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
+    plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
 
-# fontP = FontProperties()
-# fontP.set_size('x-small')
+fontP = FontProperties()
+fontP.set_size('x-small')
 
-# plt.title("success rate")
-# plt.xlabel("checkpoints")
-# ax.legend(loc="upper left",prop=fontP)
-# plt.savefig("general/final_figures/smooth-buffer.png")
+plt.title("success rate")
+plt.xlabel("checkpoints")
+ax.legend(loc="upper left",prop=fontP)
+plt.savefig("general/final_figures/maze/buffer.png")
 
 
 

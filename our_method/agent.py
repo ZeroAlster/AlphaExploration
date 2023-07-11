@@ -183,6 +183,16 @@ class Agent():
         self.simulator=environment
         self.threshold=threshold
 
+
+        # define simulator environment
+        if self.simulator=="maze":
+            self.model=Env(n=max_steps,maze_type='square_large')
+        elif self.simulator=="point":
+            self.model=gym.make("PointUMaze-v1")
+        else:
+            sys.exit("simulator is not valid.")
+
+
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
         self.actor_target = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -216,13 +226,13 @@ class Agent():
         else:
             return False
         
-    def step(self,env,node,action):
+    def step(self,node,action):
 
         if self.simulator=="maze":
-            env._state['state']=env.to_tensor(node.coordination[0:2])
-            new_coordination,_,_,_=env.step(action)
+            self.model._state['state']=self.model.to_tensor(node.coordination[0:2])
+            new_coordination,_,_,_=self.model.step(action)
         elif self.simulator=="point":
-            new_coordination,_,_,_=env.planning_step(node.coordination,action)
+            new_coordination,_,_,_=self.model.planning_step(node.coordination,action)
         else:
             sys.exit("wrong simulator!")
         return new_coordination
@@ -234,14 +244,6 @@ class Agent():
         nodes.append(root)
         goal=root
 
-
-        # define the simulator
-        if self.simulator=="maze":
-            env=Env(n=max_steps,maze_type='square_large')
-        elif self.simulator=="point":
-            env=gym.make("PointUMaze-v1")
-        else:
-            sys.exit("simulator is not valid.")
         
         # create the grapgh
         for _ in range(RRT_budget):
@@ -251,7 +253,7 @@ class Agent():
             action=np.random.uniform(-self.action_range,self.action_range,size=(2,))
             
             # find the next state
-            new_coordination=self.step(env,node,action)    
+            new_coordination=self.step(node,action)    
             
             # creating the new node and adding it to the tree
             child=Node((node,action),new_coordination)
@@ -281,10 +283,6 @@ class Agent():
         while node.parent is not None:
             option.append(node.parent[1])
             node=node.parent[0]
-        
-        
-        # removing extra files
-        os.remove(env.file_path)
 
 
         return option    

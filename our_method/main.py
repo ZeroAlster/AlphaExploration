@@ -22,7 +22,7 @@ from general.simple_estimator import SEstimator
 
 
 
-# current version: one buffer
+# current version: Two buffers and FIFO
 
 
 #hyper params
@@ -342,7 +342,7 @@ def train(agent,env,address,environment):
         destinations.append([terminal,frame])
 
         # set number of updates from short memory (off for one-buffer settings)
-        #agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
         # remove extra data
         gc.collect()
