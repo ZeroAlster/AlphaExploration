@@ -17,8 +17,8 @@ max_steps= 100
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-#noise_scale=(0.2,0.2)
-noise_scale=(0.4,0.05)
+noise_scale=(0.2,0.2)
+# noise_scale=(0.4,0.05)
 ######################################
 
 

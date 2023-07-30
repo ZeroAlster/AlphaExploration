@@ -300,7 +300,7 @@ def main(address,environment):
         env=Env(n=max_steps,maze_type='square_large')
         num_actions = env.action_size
         num_states  = env.state_size*2
-        action_range=env.action_range
+        action_range=np.array((env.action_range,env.action_range))
         threshold=0.15
     else:
         sys.exit("The environment does not exist!")

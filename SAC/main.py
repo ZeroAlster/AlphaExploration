@@ -20,8 +20,8 @@ from stable_baselines3.common.noise import NormalActionNoise
 #hyper params
 ######################################
 replay_buffer_size = 1e6
-max_frames  = 10e6
-learning_rate=3e-4
+max_frames  = 6e6
+learning_rate=5e-4
 max_steps   = 100
 batch_size  = 128
 seed=random.randint(0,100)
@@ -71,7 +71,7 @@ def main(address,environment):
     # initialize the environment and noise
     if environment=="maze":
         env=Env(n=max_steps,maze_type='square_large')
-        sigma=0.2 * np.ones(2)
+        sigma=0.15 * np.ones(2)
     elif environment=="point":
         env=gym.make("PointUMaze-v1")
         sigma=np.ones(2)* 0.4

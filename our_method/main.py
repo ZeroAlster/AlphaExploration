@@ -13,16 +13,15 @@ import statistics
 from our_method.agent import Agent
 from general.simple_estimator import minimum_visit
 import torch
-import math
 import os
 import gym
-import gc
+import math
 import mujoco_maze  # noqa
 from general.simple_estimator import SEstimator
 
 
 
-# current version: Two buffers and FIFO
+# current version: main version
 
 
 #hyper params
@@ -330,6 +329,7 @@ def train(agent,env,address,environment):
                 
                 # adding successful trajectory to the short memory
                 if agent.neighbour(next_state[0:2],next_state[-2:]):
+                    print("success in: "+str(frame))
                     save_to_buffer(agent,episode_memory,short=True)
 
                 
@@ -344,10 +344,6 @@ def train(agent,env,address,environment):
         # set number of updates from short memory (off for one-buffer settings)
         agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
-        # remove extra data
-        gc.collect()
-
-
         # update after each episode when the warmup is done
         for i in range(num_updates):
             agent.update(batch_size,i)
@@ -358,10 +354,10 @@ def train(agent,env,address,environment):
             pickle.dump(destinations, fp)
     with open(address+"/success_rates", "wb") as fp:
             pickle.dump(success_rates, fp)
-    # with open(address+"/successful_trajectories", "wb") as fp:
-    #         pickle.dump(agent.short_memory.buffer, fp)
     with open(address+"/env_coverage", "wb") as fp:
             pickle.dump(env_coverages, fp)
+    # with open(address+"/successful_trajectories", "wb") as fp:
+    #         pickle.dump(agent.short_memory.buffer, fp)
     # np.save(address+"/visits",agent.density_estimator.visits)
 
     # save agent nn models

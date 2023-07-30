@@ -18,7 +18,7 @@ import mujoco_maze #noqa
 
 #hyper params
 ######################################
-max_frames  = 1.5e6
+max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
 num_updates=10
@@ -301,6 +301,7 @@ def main(address,environment,option_length):
         num_actions = env.action_size
         num_states  = env.state_size*2
         action_range=env.action_range
+        action_range=np.array((env.action_range,env.action_range))
         threshold=0.15
     else:
         sys.exit("The environment does not exist!")

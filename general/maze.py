@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import gym
 from gym import spaces
-
+import random
 
 class Maze:
     def __init__(self, *segment_dicts, goal_squares=None, start_squares=None):
@@ -56,6 +56,7 @@ class Maze:
         return w
 
     def _add_segment(self, name, anchor, direction, connect=None, times=1):
+
         name = str(name).lower()
         original_name = str(name).lower()
         if times > 1:
@@ -118,6 +119,18 @@ class Maze:
                 wall = self._wall_line(segment['loc'], c_dir)
                 if wall in self._walls:
                     self._walls.remove(wall)
+        
+        
+        # simplifying the maze with removing some walls
+        # i=0
+        # simpler_maze=set()
+        # removed=[93,2,5,16,21,97,64,10,109,116,97,24]
+        # for wall in self._walls:
+        #     if i not  in removed:
+        #         simpler_maze.add(wall)
+        #     i+=1
+        # self._walls=simpler_maze
+
 
         if self._goal_squares is None:
             self.goal_squares = [self._last_segment]
@@ -228,7 +241,7 @@ class Maze:
 mazes_dict = dict()
 
 segments_crazy = [
-    {'anchor': 'origin', 'direction': 'right', 'name': '1,0'},
+     {'anchor': 'origin', 'direction': 'right', 'name': '1,0'},
      {'anchor': 'origin', 'direction': 'up', 'name': '0,1'},
      {'anchor': '1,0', 'direction': 'right', 'name': '2,0'},
      {'anchor': '0,1', 'direction': 'up', 'name': '0,2'},
@@ -332,6 +345,7 @@ mazes_dict['square_large'] = {'maze': Maze(*segments_crazy, goal_squares='9,9'),
 
 
 
+
 class Env(gym.Env):
     def __init__(self,n=50, maze_type=None):
         super(Env, self).__init__()
@@ -341,6 +355,8 @@ class Env(gym.Env):
         self.goal_achievement=0
         self._mazes = mazes_dict
         self.maze_type = maze_type.lower()
+        
+
         assert self.maze_type in self._mazes
         self._state = dict(s0=None,n=None, prev_state=None, state=None, goal=None, done=None)
         self.dist_threshold = 0.15
@@ -433,7 +449,8 @@ class Env(gym.Env):
 
 
     def reset(self):
-        s_xy=self.to_tensor([0.1470, 0.4662])
+        # s_xy=self.to_tensor([0.1470, 0.4662])
+        s_xy=self.to_tensor([6, 3])
         g_xy=self.to_tensor([8.8503, 9.1610])
 
         self._state = {

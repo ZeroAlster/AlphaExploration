@@ -197,7 +197,7 @@ def save_to_buffer(agent,episode_memory,k):
                 transition[0][-2:]=goal
                 transition[3][-2:]=goal
                 if agent.neighbour(transition[3][0:2],transition[3][-2:]):
-                    transition[2]=1
+                    transition[2]=HER_goal_reward
                     transition[4]=1
                 else:
                     transition[2]=episode_memory[0][2]
@@ -328,7 +328,7 @@ def main(address,environment,k):
         env=Env(n=max_steps,maze_type='square_large')
         num_actions = env.action_size
         num_states  = env.state_size*2
-        action_range=env.action_range
+        action_range=np.array((env.action_range,env.action_range))
         threshold=0.15
     else:
         sys.exit("The environment does not exist!")

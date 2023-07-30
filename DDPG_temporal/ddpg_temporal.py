@@ -17,10 +17,7 @@ max_steps= 100
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-#noise_scale=(0.2,0.2)
-noise_scale=(0.4,0.05)
 epsilon_decay=0.9999988
-minimum_exploration=0.01
 ######################################
 
 
@@ -37,11 +34,7 @@ class Memory:
     def push(self, state, action, reward, next_state, done,step):
         experience = (state, action, np.array([reward]), next_state, np.array([done]),np.array([step]))
         self.buffer.append(experience)
-        self.hit+=1
-        
-        # shuffle the buffer
-        # if self.hit % self.shuffle_interval==0:
-        #     random.shuffle(self.buffer)    
+        self.hit+=1    
 
 
     def sample(self, batch_size):
@@ -124,7 +117,6 @@ class Agent():
         self.gamma = gamma
         self.tau = tau
         self.action_range=action_range
-        self.noise_scale=noise_scale
         self.threshold=threshold
         self.option_length=option_length
         self.epsilon_decay=epsilon_decay

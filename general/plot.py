@@ -22,63 +22,63 @@ def neighbour(state,goal):
 def plot(address,success_rates,locations,explorations,num_agents):
     
     # plot success rates for each agent
-    for i in range(len(success_rates)):
-        plt.figure()
-        plt.plot(success_rates[i])
-        plt.savefig(address+"/agent"+str(i+1)+"/success_rates")
+    # for i in range(len(success_rates)):
+    #     plt.figure()
+    #     plt.plot(success_rates[i])
+    #     plt.savefig(address+"/agent"+str(i+1)+"/success_rates")
     
 
-    # plot success rates all together
-    number=len(success_rates[0])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
+    # # plot success rates all together
+    # number=len(success_rates[0])
+    # std=np.zeros((1,number))
+    # mean=np.zeros((1,number))
+    # horizon=np.zeros((1,number))
     
-    # we plot the results until 6M frames
-    for i in range(number):
-        values=[]
-        for j in range(num_agents):
-            values.append(success_rates[j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
+    # # we plot the results until 6M frames
+    # for i in range(number):
+    #     values=[]
+    #     for j in range(num_agents):
+    #         values.append(success_rates[j][i])
+    #     mean[0][i]=sum(values)/len(values)
+    #     std[0][i]=statistics.pstdev(values)
+    #     horizon[0][i]=i
     
-    plt.figure()
-    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
+    # plt.figure()
+    # plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
 
-    # fix the error bar
-    std=std
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
+    # # fix the error bar
+    # std=std
+    # down_bar=np.maximum((mean-std)[0,:],0)
+    # up_bar=np.minimum((mean+std)[0,:],1)
 
-    plt.fill_between(horizon[0,:],down_bar,up_bar)
-    plt.savefig(address+"/success_rates.png")
-    plt.close("all")
+    # plt.fill_between(horizon[0,:],down_bar,up_bar)
+    # plt.savefig(address+"/success_rates.png")
+    # plt.close("all")
 
 
     #plot the exploration curves
-    number=len(explorations[7])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
+    # number=len(explorations[7])
+    # std=np.zeros((1,number))
+    # mean=np.zeros((1,number))
+    # horizon=np.zeros((1,number))
 
-    for i in range(number):
-        values=[]
-        for j in range(num_agents):
-            values.append(explorations[j][i]*(25/17))
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
+    # for i in range(number):
+    #     values=[]
+    #     for j in range(num_agents):
+    #         values.append(explorations[j][i]*(25/17))
+    #     mean[0][i]=sum(values)/len(values)
+    #     std[0][i]=statistics.pstdev(values)
+    #     horizon[0][i]=i
     
-    plt.figure()
-    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
+    # plt.figure()
+    # plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
     
-    # fix the error bar
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
+    # # fix the error bar
+    # down_bar=np.maximum((mean-std)[0,:],0)
+    # up_bar=np.minimum((mean+std)[0,:],1)
 
-    plt.fill_between(horizon[0,:],down_bar,up_bar)
-    plt.savefig(address+"/env_coverage.png")
+    # plt.fill_between(horizon[0,:],down_bar,up_bar)
+    # plt.savefig(address+"/env_coverage.png")
 
 
 
@@ -110,16 +110,16 @@ def plot(address,success_rates,locations,explorations,num_agents):
             # if destination[1]>2e6:
             #     continue
 
-            if  neighbour(destination[0][0:2],destination[0][-2:]):
-                sample=destination[0][0:2]
+            if  neighbour(destination[0:2],destination[-2:]):
+                sample=destination[0:2]
                 goals.append(sample)    
             
             else:
-                sample=destination[0][0:2]
+                sample=destination[0:2]
                 sampler.append(sample)
                 
             
-            if len(sampler)==10:
+            if len(sampler)==15:
                 sample=random.choice(sampler)
                 locations_x.append(sample[0])
                 locations_y.append(sample[1])
@@ -128,10 +128,12 @@ def plot(address,success_rates,locations,explorations,num_agents):
         print(i)
         print(len(locations_x))
         print(len(goals))
-        #samples=random.sample(samples,4000)
+        # samples=random.sample(samples,4000)
 
 
-        goals=random.sample(goals,30)
+        if len(goals)>=30:
+            goals=random.sample(goals,30)
+        
         for goal in goals:
             locations_x.append(goal[0])
             locations_y.append(goal[1])
@@ -171,9 +173,9 @@ def read(address,num_agents):
         with open(address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
             locations.append(pickle.load(fp))
     
-    for i in range(num_agents):
-        with open(address+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-            explorations.append(pickle.load(fp))
+    # for i in range(num_agents):
+    #     with open(address+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+    #         explorations.append(pickle.load(fp))
     
     
     return success_rates,locations,explorations

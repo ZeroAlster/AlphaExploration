@@ -33,56 +33,56 @@ warm_up=20000
 def plot(address,locations,success_rates,explorations):
 
     # plot success rates
-    number=len(success_rates[0])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
+    # number=len(success_rates[0])
+    # std=np.zeros((1,number))
+    # mean=np.zeros((1,number))
+    # horizon=np.zeros((1,number))
     
-    # we plot the results until 6M frames
-    for i in range(number):
-        values=[]
-        for j in range(num_agents):
-            values.append(success_rates[j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
+    # # we plot the results until 6M frames
+    # for i in range(number):
+    #     values=[]
+    #     for j in range(num_agents):
+    #         values.append(success_rates[j][i])
+    #     mean[0][i]=sum(values)/len(values)
+    #     std[0][i]=statistics.pstdev(values)
+    #     horizon[0][i]=i
     
-    plt.figure()
-    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
+    # plt.figure()
+    # plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
 
     # fix the error bar
-    std=std
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
+    # std=std
+    # down_bar=np.maximum((mean-std)[0,:],0)
+    # up_bar=np.minimum((mean+std)[0,:],1)
 
-    plt.fill_between(horizon[0,:],down_bar,up_bar)
-    plt.savefig(address+"/success_rates.png")
+    # plt.fill_between(horizon[0,:],down_bar,up_bar)
+    # plt.savefig(address+"/success_rates.png")
 
 
     #plot the exploration curves
-    number=100
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
+    # number=100
+    # std=np.zeros((1,number))
+    # mean=np.zeros((1,number))
+    # horizon=np.zeros((1,number))
     
     
-    for i in range(number):
-        values=[]
-        for j in range(num_agents):
-            values.append(explorations[j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
+    # for i in range(number):
+    #     values=[]
+    #     for j in range(num_agents):
+    #         values.append(explorations[j][i])
+    #     mean[0][i]=sum(values)/len(values)
+    #     std[0][i]=statistics.pstdev(values)
+    #     horizon[0][i]=i
     
-    plt.figure()
-    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
+    # plt.figure()
+    # plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
 
-    # fix the error bar
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
+    # # fix the error bar
+    # down_bar=np.maximum((mean-std)[0,:],0)
+    # up_bar=np.minimum((mean+std)[0,:],1)
 
-    plt.fill_between(horizon[0,:],down_bar,up_bar)
-    plt.savefig(address+"/env_coverage.png")
+    # plt.fill_between(horizon[0,:],down_bar,up_bar)
+    # plt.savefig(address+"/env_coverage.png")
 
     
     # plot locations on the map
@@ -103,11 +103,12 @@ def plot(address,locations,success_rates,explorations):
         for destination in destinations:
 
             # we plot the results until 6M frames
-            if destination[1]>6e6:
-                continue
+            # if destination[1]>6e6:
+            #     continue
 
-            sample=destination[0][0:2]
             
+            sample=destination[0][0:2]
+
             if sample[0]>9.5 or sample[1]>9.5:
                 #sample=[min(sample[0],9.5),min(sample[1],9.5)]
                 continue
@@ -302,7 +303,7 @@ def main(address,environment,beta,increment):
         env=Env(n=max_steps,maze_type='square_large')
         num_actions = env.action_size
         num_states  = env.state_size*2
-        action_range=env.action_range
+        action_range=np.array((env.action_range,env.action_range))
         density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
         threshold=0.15
     else:
@@ -353,9 +354,9 @@ if __name__ == '__main__':
             with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
                 success_rates.append(pickle.load(fp))
         
-        for i in range(num_agents):
-            with open(args.address+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-                explorations.append(pickle.load(fp))
+        # for i in range(num_agents):
+        #     with open(args.address+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
+        #         explorations.append(pickle.load(fp))
         
         for i in range(num_agents):
             with open(args.address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
