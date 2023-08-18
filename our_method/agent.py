@@ -19,13 +19,13 @@ import os
 
 #hyper params
 ######################################
-replay_buffer_size = 5e5
+replay_buffer_size = 1e6
 hidden_size=128
 actor_learning_rate=1e-4
 critic_learning_rate=1e-3
-epsilon_decay=0.999992
+epsilon_decay=0.9999988
 epsilon=1
-RRT_budget=30
+RRT_budget=40
 max_steps   = 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -57,8 +57,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):

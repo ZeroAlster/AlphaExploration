@@ -31,21 +31,103 @@ import pylab
 
 
 
+success1=[]
+success2=[]
+success3=[]
+address1="our_method/results/mujoco/exploration/noise"
+address2="our_method/results/mujoco/exploration/epsilon-greedy"
+address3="our_method/results/mujoco/full"
+
+
+
+for i in range(10):
+    with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success1.append(pickle.load(fp))
+for i in range(10):
+    with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success2.append(pickle.load(fp))
+for i in range(10):
+    with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+        success3.append(pickle.load(fp))
+
+
+plt.figure()
+ax = plt.subplot(111)
+all_success=[]
+labels=["action-space noise","epsilon-greedy","\u03B5dt-greedy"]
+colors=["blue","darkorange","green","red","fuchsia"]
+# colors=["blue","darkorange","green","purple"]
+all_success.append(success1)
+all_success.append(success2)
+all_success.append(success3)
+
+
+for k in range(3):
+    number=len(all_success[k][0])
+    std=np.zeros((1,number))
+    mean=np.zeros((1,number))
+    horizon=np.zeros((1,number))
+
+    for i in range(number):
+        values=[]
+
+        agents=10
+
+        for j in range(agents):
+            values.append(all_success[k][j][i])
+        mean[0][i]=sum(values)/len(values)
+        std[0][i]=statistics.pstdev(values)
+        horizon[0][i]=i
+    
+    # smoothing the plots
+    X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
+    X_ = np.linspace(horizon.min(), horizon.max(), 500)
+    Y_ = X_Y_Spline(X_)
+    Y_=np.minimum(Y_,1)
+    Y_=np.maximum(Y_,0)
+    plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
+    
+    
+    # plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
+
+    # fix the error bar
+    std=std
+    down_bar=np.maximum((mean-std)[0,:],0)
+    up_bar=np.minimum((mean+std)[0,:],1)
+
+    plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
+
+fontP = FontProperties()
+fontP.set_size('x-small')
+
+plt.title("success rate")
+plt.xlabel("checkpoints")
+ax.legend(loc="lower right",prop=fontP)
+plt.savefig("test")
+#####################################
+
+
+
+
+# plot the success rates for the paper
+######################################
 # success1=[]
 # success2=[]
 # success3=[]
 # success4=[]
 # success5=[]
+# success6=[]
 # address1="our_method/results/maze/full"
-# address2="our_method/results/maze/buffer/One-CER"
-# address3="our_method/results/maze/buffer/One-FIFO"
-# address4="our_method/results/maze/buffer/One-RS"
-# address5="our_method/results/maze/buffer/Two-FIFO"
+# address2="DDPG/results/maze"
+# address3="DDPG_HER/results/maze"
+# address4="DDPG_ICM/results/maze"
+# address5="DDPG_temporal/results/maze/full"
+# address6="SAC/results/maze"
 
 # for i in range(11):
 #     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success1.append(pickle.load(fp))
-# for i in range(5):
+# for i in range(10):
 #     with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success2.append(pickle.load(fp))
 # for i in range(5):
@@ -57,21 +139,29 @@ import pylab
 # for i in range(5):
 #     with open(address5+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
 #         success5.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address6+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success6.append(pickle.load(fp))
+
+
 
 # plt.figure()
 # ax = plt.subplot(111)
 # all_success=[]
-# labels=["Two-RS","One-CER","One-FIFO","One-RS","Two-FIFO"]
-# colors=["blue","darkorange","green","red","fuchsia"]
+# labels=["DGL-DDPG","DDPG","DDPG + HER","DDPG + intrinsic motivation","DDPG + \u03B5z-Greedy ","SAC"]
+# colors=["purple","blue","darkorange","green","red","aqua"]
 # all_success.append(success1)
 # all_success.append(success2)
 # all_success.append(success3)
 # all_success.append(success4)
 # all_success.append(success5)
+# all_success.append(success6)
 
 
-# for k in range(5):
-#     number=len(success2[0])
+
+# for k in range(6):
+
+#     number=len(all_success[k][0])
 #     std=np.zeros((1,number))
 #     mean=np.zeros((1,number))
 #     horizon=np.zeros((1,number))
@@ -87,124 +177,31 @@ import pylab
 #         std[0][i]=statistics.pstdev(values)
 #         horizon[0][i]=i
     
-#     # smoothing the plots
+#     #smoothing the plots
 #     X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
 #     X_ = np.linspace(horizon.min(), horizon.max(), 500)
 #     Y_ = X_Y_Spline(X_)
+#     Y_=np.minimum(Y_,1)
+#     Y_=np.maximum(Y_,0)
+
 #     plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
     
-    
-#     #plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
+#     # ax.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
 
 #     # fix the error bar
-#     std=std*0.75
+#     std=std
 #     down_bar=np.maximum((mean-std)[0,:],0)
 #     up_bar=np.minimum((mean+std)[0,:],1)
 
-#     plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
+#     ax.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
 
 # fontP = FontProperties()
 # fontP.set_size('x-small')
 
 # plt.title("success rate")
 # plt.xlabel("checkpoints")
-# ax.legend(loc="upper left",prop=fontP)
-# plt.savefig("general/final_figures/maze/buffer.png")
-
-
-
-
-# plot the success rates for the paper
-######################################
-success1=[]
-success2=[]
-success3=[]
-success4=[]
-success5=[]
-success6=[]
-address1="our_method/results/simple_maze1"
-address2="DDPG/results/simple_maze1"
-address3="DDPG_HER/results/simple_maze1"
-address4="DDPG_ICM/results/simple_maze1"
-address5="DDPG_temporal/results/simple_maze1"
-address6="SAC/results/simple_maze1"
-
-for i in range(5):
-    with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success1.append(pickle.load(fp))
-for i in range(5):
-    with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success2.append(pickle.load(fp))
-for i in range(5):
-    with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success3.append(pickle.load(fp))
-for i in range(5):
-    with open(address4+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success4.append(pickle.load(fp))
-for i in range(6):
-    with open(address5+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success5.append(pickle.load(fp))
-for i in range(5):
-    with open(address6+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success6.append(pickle.load(fp))
-
-
-
-plt.figure()
-ax = plt.subplot(111)
-all_success=[]
-labels=["our method","DDPG","DDPG + HER","DDPG + intrinsic motivation","DDPG + \u03B5z-Greedy ","SAC"]
-colors=["purple","blue","darkorange","green","red","aqua"]
-all_success.append(success1)
-all_success.append(success2)
-all_success.append(success3)
-all_success.append(success4)
-all_success.append(success5)
-all_success.append(success6)
-
-
-
-for k in range(6):
-
-    number=len(all_success[k][0])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
-
-    for i in range(number):
-        values=[]
-        agents=5
-        if k==4:
-            agents=6
-        for j in range(agents):
-            values.append(all_success[k][j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
-    
-    #smoothing the plots
-    X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
-    X_ = np.linspace(horizon.min(), horizon.max(), 500)
-    Y_ = X_Y_Spline(X_)
-    Y_=np.minimum(Y_,1)
-    plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
-    
-    # ax.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
-
-    # fix the error bar
-    std=std
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
-
-    ax.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
-
-fontP = FontProperties()
-fontP.set_size('x-small')
-
-plt.title("success rate")
-plt.xlabel("checkpoints")
-# plt.legend(ncol=6, loc='upper left') 
-plt.savefig("general/final_figures/maze/simple1.png")
+# plt.legend(loc='upper left',prop=fontP) 
+# plt.savefig("test")
 #####################################
 
 
@@ -235,7 +232,7 @@ plt.savefig("general/final_figures/maze/simple1.png")
 # plt.figure()
 # ax = plt.subplot(111)
 # explorations=[]
-# labels=["DDPG + intrinsic motivation","DDPG + \u03B5z-Greedy ","DDPG","our method"]
+# labels=["DDPG + intrinsic motivation","DDPG + \u03B5z-Greedy ","DDPG","DDPG + \u03B5dt-greedy"]
 # colors=["blue","darkorange","green","purple"]
 # explorations.append(explorations1)
 # explorations.append(explorations2)
@@ -273,7 +270,7 @@ plt.savefig("general/final_figures/maze/simple1.png")
 # plt.title("environment coverage")
 # plt.xlabel("checkpoints")
 # ax.legend(loc="lower right")
-# plt.savefig("general/final_figures/mujoco/env_coverage.png")
+# plt.savefig("test")
 # ######################################
 
 
@@ -282,9 +279,9 @@ plt.savefig("general/final_figures/maze/simple1.png")
 
 # print number of successes for each agent
 ######################################
-# num_agent=11
+# num_agent=15
 # for  i in range(num_agent):
-#     with open("DDPG_temporal/results/simple_maze1/agent"+str(i+1)+"/locations", 'rb') as fp:
+#     with open("additional ablation study/exploration/maze/agent"+str(i+1)+"/locations", 'rb') as fp:
 #                 locations=pickle.load(fp)
 #     success=0
 #     for k in range(len(locations)):
