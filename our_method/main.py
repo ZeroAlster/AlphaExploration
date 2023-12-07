@@ -1,10 +1,10 @@
 import sys
-sys.path.append("/nfs/home/futuhi/AlphaExploration")
+sys.path.append("/home/futuhi/AlphaExploration")
 import argparse
 from general.maze import Env
 from IPython.display import clear_output
-import matplotlib.pyplot as plt
 from matplotlib import animation
+import matplotlib.pyplot as plt
 from IPython.display import display
 import numpy as np
 import pickle
@@ -19,9 +19,7 @@ import math
 import mujoco_maze  # noqa
 from general.simple_estimator import SEstimator
 
-
-
-# current version: DDPG + exploration idea
+# current version: Exploration method
 
 
 #hyper params
@@ -154,8 +152,8 @@ def evaluation(agent,environment):
         obs = env_test.reset()
         done=False
         while not done:
-            action = agent.get_action(obs,warmup=False,evaluation=True)[0]
-            obs,_,done,_= env_test.step(action)
+            action,_,_ = agent.get_action(obs,warmup=False,evaluation=True)
+            obs,_,done,_= env_test.step(action[0])
         if agent.neighbour(obs[0:2],obs[-2:]):
             success+=1
     
@@ -253,6 +251,11 @@ def train(agent,env,address,environment):
     destinations=[]
     success_rates=[]
     env_coverages=[]
+    explorative_dist=[]
+
+    # fill all option length bins az zero
+    for i in range(40):
+        explorative_dist.append(0)
 
     # define an estimator for the exploration curve
     density_height=env.observation_space.high[0]-env.observation_space.low[0]
@@ -266,10 +269,13 @@ def train(agent,env,address,environment):
         episode_memory=[]
         terminal=state
         while not done:
-            option = agent.get_action(state,warmup=True)
+            option,_,_ = agent.get_action(state,warmup=True)
             for action in option:
                 next_state, reward, done, _ = env.step(action)
-                episode_memory.append([state, action, reward, next_state, np.float(agent.neighbour(next_state[0:2],next_state[-2:]))])
+                episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
+                # graph update if model is not available
+                if not agent.model_access:
+                    agent.graph.add_transition(state,action,next_state)
                 state=next_state
                 
                 # agent and env density update
@@ -306,10 +312,18 @@ def train(agent,env,address,environment):
         terminal=state
         
         while not done:
-            option = agent.get_action(state,warmup=False)
+            option,e,l = agent.get_action(state,warmup=False)
+
+            # record explorative option length
+            if e:
+                explorative_dist[l-1]+=1
+
             for action in option:
                 next_state, reward, done, _ = env.step(action)
-                episode_memory.append([state, action, reward, next_state, np.float(agent.neighbour(next_state[0:2],next_state[-2:]))])
+                episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
+                # graph update if model is not available
+                if not agent.model_access:
+                    agent.graph.add_transition(state,action,next_state)
                 state=next_state
 
                 # agent and env density update
@@ -355,6 +369,9 @@ def train(agent,env,address,environment):
             pickle.dump(success_rates, fp)
     with open(address+"/env_coverage", "wb") as fp:
             pickle.dump(env_coverages, fp)
+    with open(address+"/explorative_dist", "wb") as fp:
+            pickle.dump(explorative_dist, fp)
+    
     # with open(address+"/successful_trajectories", "wb") as fp:
     #         pickle.dump(agent.short_memory.buffer, fp)
     # np.save(address+"/visits",agent.density_estimator.visits)
@@ -369,7 +386,7 @@ def train(agent,env,address,environment):
 
 
 
-def main(address,environment):
+def main(address,environment,model_avb):
     # initiate the environment, get action and state space size, and get action range
     if environment =="point":
         env=gym.make("PointUMaze-v1")
@@ -390,7 +407,7 @@ def main(address,environment):
 
     
     # initiate the agent
-    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold)
+    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb)
     
     # train the agent
     train(agent,env,address,environment)
@@ -401,6 +418,7 @@ if __name__ == '__main__':
     parser.add_argument('-a','--address',required=True)
     parser.add_argument('-t','--task',required=True)
     parser.add_argument('-e','--environment',required=True)
+    parser.add_argument('-m','--model',required=True)
     args = parser.parse_args()
 
     
@@ -417,11 +435,11 @@ if __name__ == '__main__':
     if  not os.path.exists(args.address):
         sys.exit("The path is wrong!")
     else:
-        print("path is valid!")
+        print("path is valid with seed: "+str(seed))
     
     # train the agent
     if args.task=="train":
-        main(args.address,args.environment)
+        main(args.address,args.environment,args.model=="True")
     
     # plot success rates, exploration curves, and destinations of all agents
     elif args.task=="plot":

@@ -7,6 +7,7 @@ import numpy as np
 import random
 import torch.optim as optim
 from general.simple_estimator import SEstimator
+from general.graph import Graph
 from torch.autograd import Variable
 import math
 import sys
@@ -169,7 +170,9 @@ class Actor(nn.Module):
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
+    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,
+                 hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, 
+                 gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
         
         # Params
         self.num_actions = num_actions
@@ -182,13 +185,16 @@ class Agent():
         self.short_memory_updates=0
         self.simulator=environment
         self.threshold=threshold
+        self.model_access=model_avb
 
 
-        # define simulator environment
+        # define simulator environment and the graph if model is not available
         if self.simulator=="maze":
             self.model=Env(n=max_steps,maze_type='square_large')
+            self.graph=Graph(0.1,[-0.5,-0.5],10)
         elif self.simulator=="point":
             self.model=gym.make("PointUMaze-v1")
+            self.graph=Graph(0.2,[-2,-2],20)
         else:
             sys.exit("simulator is not valid.")
 
@@ -250,10 +256,23 @@ class Agent():
             
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
-            action=np.random.uniform(-self.action_range,self.action_range,size=(2,))
 
-            # find the next state
-            new_coordination=self.step(node,action)    
+            action=np.random.uniform(-self.action_range,self.action_range,size=(2,))
+            model_response=self.step(node,action)
+
+            if self.model_access:
+                new_coordination=model_response
+            else:
+                dic_obs,dic_action=self.graph.find(node.coordination)
+                if dic_obs is not None:
+                    new_coordination=dic_obs
+                    action=dic_action    
+                else:
+                    new_coordination=model_response
+                    child=Node((node,action),new_coordination)
+                    nodes.append(child)
+                    goal=child
+                    break
             
             # creating the new node and adding it to the tree
             child=Node((node,action),new_coordination)
@@ -267,7 +286,7 @@ class Agent():
             # update the goal to be the node with minimum visit
             cell_x,cell_y=self.point_to_cell(new_coordination)
             goal_cell_x,goal_cell_y=self.point_to_cell(goal.coordination)
-            if self.density_estimator.visits[cell_x][cell_y] <=self.density_estimator.visits[goal_cell_x][goal_cell_y]:
+            if self.density_estimator.visits[cell_x][cell_y] <self.density_estimator.visits[goal_cell_x][goal_cell_y]:
                 goal=child
         
         
@@ -279,11 +298,12 @@ class Agent():
         
         # find a path from root to the goal or the randomly selected node
         option=[]
+        # make a random move in the least visited cell
+        option.append(np.random.uniform(-self.action_range,self.action_range,size=(2,)))
         node=goal
         while node.parent is not None:
             option.append(node.parent[1])
             node=node.parent[0]
-
 
         return option    
     
@@ -293,12 +313,21 @@ class Agent():
         
         if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
             
+            exploration=True
+            
             # we will output an option by RRT or a random action
             option= self.RRT(state)
+
+            # record option length for distribution in the tree
+            length=len(option)
 
             # to see the impact of rrt exploration 
             #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
         else:
+            
+            exploration =False
+            length=1
+
             #get a primitive action from the network
             state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
             action = self.actor.forward(state)
@@ -312,7 +341,7 @@ class Agent():
         if self.epsilon> minimum_exploration:
             self.epsilon=self.epsilon*self.epsilon_decay
 
-        return option
+        return option,exploration,length
 
     # noisy action
     # def get_action(self, state,warmup,evaluation=False):
