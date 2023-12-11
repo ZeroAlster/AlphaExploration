@@ -265,6 +265,7 @@ def train(agent,env,address,environment):
     frame=0
     while frame<warm_up:
         state = env.reset()
+
         done=False
         episode_memory=[]
         terminal=state

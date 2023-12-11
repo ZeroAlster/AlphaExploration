@@ -31,79 +31,79 @@ import pylab
 
 
 
-success1=[]
-success2=[]
-success3=[]
-address1="our_method/results/mujoco/exploration/noise"
-address2="our_method/results/mujoco/exploration/epsilon-greedy"
-address3="our_method/results/mujoco/full"
+# success1=[]
+# success2=[]
+# success3=[]
+# address1="our_method/results/mujoco/exploration/noise"
+# address2="our_method/results/mujoco/exploration/epsilon-greedy"
+# address3="our_method/results/mujoco/full"
 
 
 
-for i in range(10):
-    with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success1.append(pickle.load(fp))
-for i in range(10):
-    with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success2.append(pickle.load(fp))
-for i in range(10):
-    with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-        success3.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success1.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success2.append(pickle.load(fp))
+# for i in range(10):
+#     with open(address3+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+#         success3.append(pickle.load(fp))
 
 
-plt.figure()
-ax = plt.subplot(111)
-all_success=[]
-labels=["action-space noise","epsilon-greedy","\u03B5dt-greedy"]
-colors=["blue","darkorange","green","red","fuchsia"]
-# colors=["blue","darkorange","green","purple"]
-all_success.append(success1)
-all_success.append(success2)
-all_success.append(success3)
+# plt.figure()
+# ax = plt.subplot(111)
+# all_success=[]
+# labels=["action-space noise","epsilon-greedy","\u03B5dt-greedy"]
+# colors=["blue","darkorange","green","red","fuchsia"]
+# # colors=["blue","darkorange","green","purple"]
+# all_success.append(success1)
+# all_success.append(success2)
+# all_success.append(success3)
 
 
-for k in range(3):
-    number=len(all_success[k][0])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
+# for k in range(3):
+#     number=len(all_success[k][0])
+#     std=np.zeros((1,number))
+#     mean=np.zeros((1,number))
+#     horizon=np.zeros((1,number))
 
-    for i in range(number):
-        values=[]
+#     for i in range(number):
+#         values=[]
 
-        agents=10
+#         agents=10
 
-        for j in range(agents):
-            values.append(all_success[k][j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
+#         for j in range(agents):
+#             values.append(all_success[k][j][i])
+#         mean[0][i]=sum(values)/len(values)
+#         std[0][i]=statistics.pstdev(values)
+#         horizon[0][i]=i
     
-    # smoothing the plots
-    X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
-    X_ = np.linspace(horizon.min(), horizon.max(), 500)
-    Y_ = X_Y_Spline(X_)
-    Y_=np.minimum(Y_,1)
-    Y_=np.maximum(Y_,0)
-    plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
+#     # smoothing the plots
+#     X_Y_Spline = make_interp_spline(horizon[0,:], mean[0,:])
+#     X_ = np.linspace(horizon.min(), horizon.max(), 500)
+#     Y_ = X_Y_Spline(X_)
+#     Y_=np.minimum(Y_,1)
+#     Y_=np.maximum(Y_,0)
+#     plt.plot(X_, Y_, 'k-',color=colors[k],label=labels[k])
     
     
-    # plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
+#     # plt.plot(horizon[0,:],mean[0,:], 'k-',color=colors[k],label=labels[k])
 
-    # fix the error bar
-    std=std
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
+#     # fix the error bar
+#     std=std
+#     down_bar=np.maximum((mean-std)[0,:],0)
+#     up_bar=np.minimum((mean+std)[0,:],1)
 
-    plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
+#     plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.2)
 
-fontP = FontProperties()
-fontP.set_size('x-small')
+# fontP = FontProperties()
+# fontP.set_size('x-small')
 
-plt.title("success rate")
-plt.xlabel("checkpoints")
-ax.legend(loc="lower right",prop=fontP)
-plt.savefig("test")
+# plt.title("success rate")
+# plt.xlabel("checkpoints")
+# ax.legend(loc="lower right",prop=fontP)
+# plt.savefig("test")
 #####################################
 
 
@@ -279,18 +279,18 @@ plt.savefig("test")
 
 # print number of successes for each agent
 ######################################
-# num_agent=15
-# for  i in range(num_agent):
-#     with open("additional ablation study/exploration/maze/agent"+str(i+1)+"/locations", 'rb') as fp:
-#                 locations=pickle.load(fp)
-#     success=0
-#     for k in range(len(locations)):
-#         location=locations[k][0]
-#         if math.sqrt(math.pow(location[0]-8.8503,2)+math.pow(location[1]-9.1610,2))<=0.15:
-#             success+=1
-#     print("agent"+str(i+1)+":   "+str(success))
-#     print("frames agent"+str(i+1)+":   "+str(len(locations)))
-#     print("*"*30)
+num_agent=10
+for  i in range(num_agent):
+    with open("our_method/results/mujoco/model-free/agent"+str(i+1)+"/locations", 'rb') as fp:
+                locations=pickle.load(fp)
+    success=0
+    for k in range(len(locations)):
+        location=locations[k][0]
+        if math.sqrt(math.pow(location[0]-0,2)+math.pow(location[1]-16,2))<=0.6:
+            success+=1
+    print("agent"+str(i+1)+":   "+str(success))
+    print("frames agent"+str(i+1)+":   "+str(len(locations)))
+    print("*"*30)
 ######################################
 
 
