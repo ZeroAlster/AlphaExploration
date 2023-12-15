@@ -19,7 +19,7 @@ import math
 import mujoco_maze  # noqa
 from general.simple_estimator import SEstimator
 
-# current version: Exploration method
+# current version: Main method
 
 
 #hyper params
@@ -144,8 +144,10 @@ def plot(address,locations,success_rates,explorations):
 def evaluation(agent,environment):
     if environment=="maze":
         env_test=Env(n=max_steps,maze_type='square_large')
-    else:
+    elif environment=="point":
         env_test=gym.make("PointUMaze-v1")
+    else:
+        env_test=gym.make("AntPush-v1")
     
     success=0
     for _ in range(evaluation_attempts):
@@ -169,6 +171,8 @@ def exploration(density):
         min_val=1000
     elif visits.shape[0]==40:
         min_val=250
+    elif visits.shape[0]==80:
+        min_val=250
     else:
         sys.exit("wrong shape for density estimator")
 
@@ -178,39 +182,39 @@ def exploration(density):
 
 
 # main method to do updates
-# def save_to_buffer(agent,episode_memory,short=False):
+def save_to_buffer(agent,episode_memory,short=False):
    
-#     episode_next_state=episode_memory[-1][3]
-#     episode_done=episode_memory[-1][4]
+    episode_next_state=episode_memory[-1][3]
+    episode_done=episode_memory[-1][4]
 
-#     # This is a successful trajectory: MC update
-#     if episode_done:
-#         G=0
-#         for entry in reversed(episode_memory):
-#             G=entry[2]+agent.gamma*G
-#             if not short:
-#                 agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
-#             else:
-#                 agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
+    # This is a successful trajectory: MC update
+    if episode_done:
+        G=0
+        for entry in reversed(episode_memory):
+            G=entry[2]+agent.gamma*G
+            if not short:
+                agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
+            else:
+                agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
     
 
-#     # This is an unsuccessful trajectory: longest n-step return
-#     else:
-#         i=0
-#         G=0
-#         for entry in reversed(episode_memory):
-#             G=entry[2]+agent.gamma*G
-#             agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
-#             i+=1
+    # This is an unsuccessful trajectory: longest n-step return
+    else:
+        i=0
+        G=0
+        for entry in reversed(episode_memory):
+            G=entry[2]+agent.gamma*G
+            agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
+            i+=1
 
 
 # This is used for one-step TD update
-def save_to_buffer(agent,episode_memory,short=False):
-    for entry in (episode_memory):
-        if not short:
-            agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
-        else:
-            agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+# def save_to_buffer(agent,episode_memory,short=False):
+#     for entry in (episode_memory):
+#         if not short:
+#             agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+#         else:
+#             agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
 
 
 # This is used for average of first 8-step TD updates
@@ -259,7 +263,8 @@ def train(agent,env,address,environment):
 
     # define an estimator for the exploration curve
     density_height=env.observation_space.high[0]-env.observation_space.low[0]
-    env_density=SEstimator(0.5,density_height,density_height,[env.observation_space.low[0],env.observation_space.low[1]])
+    density_width=env.observation_space.high[1]-env.observation_space.low[1]
+    env_density=SEstimator(0.5,density_height,density_width,[env.observation_space.low[0],env.observation_space.low[1]])
     
     # warmup period
     frame=0
@@ -300,7 +305,6 @@ def train(agent,env,address,environment):
         # recording terminal states
         destinations.append([terminal,frame])
 
-
     print("warmup has ended!")
     
     
@@ -320,7 +324,7 @@ def train(agent,env,address,environment):
                 explorative_dist[l-1]+=1
 
             for action in option:
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, done,_= env.step(action)
                 episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
                 # graph update if model is not available
                 if not agent.model_access:
@@ -356,7 +360,7 @@ def train(agent,env,address,environment):
         destinations.append([terminal,frame])
 
         # set number of updates from short memory (off for one-buffer settings)
-        # agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
         # update after each episode when the warmup is done
         for i in range(num_updates):
@@ -382,11 +386,6 @@ def train(agent,env,address,environment):
     # torch.save(agent.critic.state_dict(), address + '/critic.pth')
 
 
-    # print number of times that goal is chieved
-    print("goal is achieved: "+str(env.goal_achievement)+"  times")
-
-
-
 def main(address,environment,model_avb):
     # initiate the environment, get action and state space size, and get action range
     if environment =="point":
@@ -403,6 +402,13 @@ def main(address,environment,model_avb):
         action_range=np.array((env.action_range,env.action_range))
         density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
         threshold=0.15
+    elif environment=="ant":
+        env=gym.make("AntPush-v1")
+        num_actions=env.action_space.shape[0]
+        num_states=env.observation_space.shape[0]
+        action_range=np.array((30,30,30,30,30,30,30,30))
+        density_estimator=SEstimator(1,40,32,[-20,-4])
+        threshold=0.6
     else:
         sys.exit("The environment does not exist!")
 
@@ -424,7 +430,7 @@ if __name__ == '__main__':
 
     
     # set random seeds
-    seed=random.randint(0,100)
+    seed=random.randint(0,1000)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True

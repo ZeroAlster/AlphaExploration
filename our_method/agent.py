@@ -26,7 +26,7 @@ actor_learning_rate=1e-4
 critic_learning_rate=1e-3
 epsilon_decay=0.9999988
 epsilon=1
-RRT_budget=40
+RRT_budget=50
 max_steps   = 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -58,8 +58,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        # if self.hit % self.shuffle_interval==0:
-        #     random.shuffle(self.buffer)    
+        if self.hit % self.shuffle_interval==0:
+            random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -165,7 +165,10 @@ class Actor(nn.Module):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
         x = F.relu(self.linear3(x))
-        x = torch.tanh(self.linear4(x))*torch.tensor((self.action_range[0],self.action_range[1]),device="cuda")
+        if self.action_range[0]!=self.action_range[1]:
+            x = torch.tanh(self.linear4(x))*torch.tensor((self.action_range[0],self.action_range[1]),device="cuda")
+        else:
+            x=torch.tanh(self.linear4(x))*torch.tensor(self.action_range,device='cuda')
         return x.float()
 
 
@@ -182,7 +185,7 @@ class Agent():
         self.epsilon=epsilon
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
-        self.short_memory_updates=0
+        self.short_memory_updates=1
         self.simulator=environment
         self.threshold=threshold
         self.model_access=model_avb
@@ -195,6 +198,9 @@ class Agent():
         elif self.simulator=="point":
             self.model=gym.make("PointUMaze-v1")
             self.graph=Graph(0.2,[-2,-2],20)
+        elif self.simulator=="ant":
+            self.model=gym.make("AntPush-v1")
+            self.graph=Graph(0.2,[-20,-4],40)
         else:
             sys.exit("simulator is not valid.")
 
@@ -237,7 +243,7 @@ class Agent():
         if self.simulator=="maze":
             self.model._state['state']=self.model.to_tensor(node.coordination[0:2])
             new_coordination,_,_,_=self.model.step(action)
-        elif self.simulator=="point":
+        elif self.simulator=="point" or self.simulator=="ant":
             new_coordination,_,_,_=self.model.planning_step(node.coordination,action)
         else:
             sys.exit("wrong simulator!")
@@ -256,8 +262,8 @@ class Agent():
             
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
-
-            action=np.random.uniform(-self.action_range,self.action_range,size=(2,))
+            
+            action=np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),))
             model_response=self.step(node,action)
 
             if self.model_access:
@@ -299,7 +305,7 @@ class Agent():
         # find a path from root to the goal or the randomly selected node
         option=[]
         # make a random move in the least visited cell
-        option.append(np.random.uniform(-self.action_range,self.action_range,size=(2,)))
+        option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
         node=goal
         while node.parent is not None:
             option.append(node.parent[1])
