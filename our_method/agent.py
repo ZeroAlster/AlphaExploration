@@ -24,9 +24,9 @@ replay_buffer_size = 1e6
 hidden_size=128
 actor_learning_rate=1e-4
 critic_learning_rate=1e-3
-epsilon_decay=0.9999988
+epsilon_decay=0.9999992
 epsilon=1
-RRT_budget=50
+RRT_budget=40
 max_steps   = 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -58,8 +58,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -198,9 +198,9 @@ class Agent():
         elif self.simulator=="point":
             self.model=gym.make("PointUMaze-v1")
             self.graph=Graph(0.2,[-2,-2],20)
-        elif self.simulator=="ant":
-            self.model=gym.make("AntPush-v1")
-            self.graph=Graph(0.2,[-20,-4],40)
+        elif self.simulator=="push":
+            self.model=gym.make("PointPush-v1")
+            self.graph=Graph(0.2,[-14,-2],28)
         else:
             sys.exit("simulator is not valid.")
 
@@ -233,7 +233,7 @@ class Agent():
 
     
     def neighbour(self,state,goal):
-        if math.sqrt(math.pow(state[0]-goal[0],2)+math.pow(state[1]-goal[1],2))<=self.threshold:
+        if np.linalg.norm(state-goal)<=self.threshold:
             return True
         else:
             return False
@@ -243,7 +243,7 @@ class Agent():
         if self.simulator=="maze":
             self.model._state['state']=self.model.to_tensor(node.coordination[0:2])
             new_coordination,_,_,_=self.model.step(action)
-        elif self.simulator=="point" or self.simulator=="ant":
+        elif self.simulator=="point" or self.simulator=="push":
             new_coordination,_,_,_=self.model.planning_step(node.coordination,action)
         else:
             sys.exit("wrong simulator!")
@@ -255,7 +255,6 @@ class Agent():
         root=Node(None,coordination)
         nodes.append(root)
         goal=root
-
         
         # create the grapgh
         for _ in range(RRT_budget):
@@ -265,6 +264,10 @@ class Agent():
             
             action=np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),))
             model_response=self.step(node,action)
+
+            # skip out of range states
+            if model_response[1]>self.model.observation_space.high[1] or model_response[1]<self.model.observation_space.low[1] or model_response[0]<self.model.observation_space.low[0] or model_response[0]>self.model.observation_space.high[0]:
+                    continue
 
             if self.model_access:
                 new_coordination=model_response
@@ -297,15 +300,16 @@ class Agent():
         
         
         # if the goal is the root, randomly select one of the other nodes 
-        if goal==root:
+        if goal==root and len(nodes)>1:
             goal=random.choice(nodes)
             while goal==root:
                 goal=random.choice(nodes)
         
         # find a path from root to the goal or the randomly selected node
         option=[]
-        # make a random move in the least visited cell
-        option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
+        # make a random move in the least visited cell (replay buffer)
+        if (not self.model_access) or len(nodes)==1 :
+            option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
         node=goal
         while node.parent is not None:
             option.append(node.parent[1])
@@ -315,58 +319,58 @@ class Agent():
     
     
     # main function
-    def get_action(self, state,warmup,evaluation=False):
-        
-        if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
-            
-            exploration=True
-            
-            # we will output an option by RRT or a random action
-            option= self.RRT(state)
-
-            # record option length for distribution in the tree
-            length=len(option)
-
-            # to see the impact of rrt exploration 
-            #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
-        else:
-            
-            exploration =False
-            length=1
-
-            #get a primitive action from the network
-            state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-            action = self.actor.forward(state)
-            action = action.cpu().detach().numpy().flatten()
-            option=[action]
-        
-        # reverse the option
-        option.reverse()
-
-        # update the epsilon
-        if self.epsilon> minimum_exploration:
-            self.epsilon=self.epsilon*self.epsilon_decay
-
-        return option,exploration,length
-
-    # noisy action
     # def get_action(self, state,warmup,evaluation=False):
         
-    #     #get a primitive action from the network
-    #     state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-    #     action = self.actor.forward(state)
-    #     action = action.cpu().detach().numpy().flatten()
+    #     if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
+            
+    #         exploration=True
+            
+    #         # we will output an option by RRT or a random action
+    #         option= self.RRT(state)
+
+    #         # record option length for distribution in the tree
+    #         length=len(option)
+
+    #         # to see the impact of rrt exploration 
+    #         #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
+    #     else:
+            
+    #         exploration =False
+    #         length=1
+
+    #         #get a primitive action from the network
+    #         state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+    #         action = self.actor.forward(state)
+    #         action = action.cpu().detach().numpy().flatten()
+    #         option=[action]
         
-    #     # adding noise to the action if it is not evaluation
-    #     if not evaluation:
-    #         noise=np.ones(2)
-    #         noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
-    #         noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
-    #         action=np.clip(action+noise,-self.action_range, self.action_range)
+    #     # reverse the option
+    #     option.reverse()
 
-    #     option=[action]
+    #     # update the epsilon
+    #     if self.epsilon> minimum_exploration:
+    #         self.epsilon=self.epsilon*self.epsilon_decay
 
-    #     return option
+    #     return option,exploration,length
+
+    # noisy action
+    def get_action(self, state,warmup,evaluation=False):
+        
+        #get a primitive action from the network
+        state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+        action = self.actor.forward(state)
+        action = action.cpu().detach().numpy().flatten()
+        
+        # adding noise to the action if it is not evaluation
+        if not evaluation:
+            noise=np.ones(2)
+            noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
+            noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
+            action=np.clip(action+noise,-self.action_range, self.action_range)
+
+        option=[action]
+
+        return option,False,1
     
     
     def update(self, batch_size,update_number):

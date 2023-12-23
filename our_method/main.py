@@ -27,118 +27,13 @@ from general.simple_estimator import SEstimator
 max_frames  = 6e6
 max_steps   = 100
 batch_size  = 128
-num_updates=10
-num_agents=10
+num_updates=20
+num_agents=20
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=20000
 ######################################
 
-
-def plot(address,locations,success_rates,explorations):
-
-    # plot success rates
-    number=len(success_rates[0])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
-    
-    # we plot the results until 6M frames
-    for i in range(number):
-        values=[]
-        for j in range(num_agents):
-            values.append(success_rates[j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
-    
-    plt.figure()
-    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
-
-    # fix the error bar
-    std=std
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
-
-    plt.fill_between(horizon[0,:],down_bar,up_bar)
-    plt.savefig(address+"/success_rates.png")
-
-
-    #plot the exploration curves
-    #number=100
-    number=len(explorations[0])
-    std=np.zeros((1,number))
-    mean=np.zeros((1,number))
-    horizon=np.zeros((1,number))
-    
-    
-    for i in range(number):
-        values=[]
-        for j in range(num_agents):
-            values.append(explorations[j][i])
-        mean[0][i]=sum(values)/len(values)
-        std[0][i]=statistics.pstdev(values)
-        horizon[0][i]=i
-    
-    plt.figure()
-    plt.plot(horizon[0,:],mean[0,:], 'k-',color="blue")
-
-    # fix the error bar
-    down_bar=np.maximum((mean-std)[0,:],0)
-    up_bar=np.minimum((mean+std)[0,:],1)
-
-    plt.fill_between(horizon[0,:],down_bar,up_bar)
-    plt.savefig(address+"/env_coverage.png")
-
-    
-    # plot locations on the map
-    for location_address in locations:
-        
-        env=Env(n=max_steps,maze_type='square_large')
-        destinations=location_address[0]
-        
-        # plot the map first
-        _, ax = plt.subplots(1, 1, figsize=(5, 4))
-        for x, y in env.maze._walls:
-            ax.plot(x, y, 'k-')
-        
-        # remove the outliers
-        locations_x=[]
-        locations_y=[]
-        sampler=[]
-        for destination in destinations:
-
-            # we plot the results until 6M frames
-            if destination[1]>4e6:
-                continue
-
-            sample=destination[0][0:2]
-            
-            if sample[0]>9.5 or sample[1]>9.5:
-                #sample=[min(sample[0],9.5),min(sample[1],9.5)]
-                continue
-            if sample[0]<-0.5 or sample[1]<-0.5:
-                #sample=[max(sample[0],-0.5),max(sample[1],-0.5)]
-                continue
-
-            if len(sampler)<4:
-                sampler.append(sample)
-            else:
-                sample=random.choice(sampler)
-                locations_x.append(sample[0])
-                locations_y.append(sample[1])
-                sampler=[]
-        
-        # plot the locations
-        colors=[]
-        for i in range(len(locations_x)):
-            colors.append(i)
-        ax.scatter(locations_x,locations_y,marker='o',cmap='gist_rainbow',c=colors,s=16)
-        pcm = ax.get_children()[0]
-        plt.colorbar(pcm,ax=ax)
-        plt.savefig(location_address[1]+"/destinations.png")
-
-    plt.close("all")
     
 
 def evaluation(agent,environment):
@@ -146,6 +41,8 @@ def evaluation(agent,environment):
         env_test=Env(n=max_steps,maze_type='square_large')
     elif environment=="point":
         env_test=gym.make("PointUMaze-v1")
+    elif environment=="push":
+        env_test=gym.make("PointPush-v1")
     else:
         env_test=gym.make("AntPush-v1")
     
@@ -171,7 +68,9 @@ def exploration(density):
         min_val=1000
     elif visits.shape[0]==40:
         min_val=250
-    elif visits.shape[0]==80:
+    elif visits.shape[0]==48:
+        min_val=250
+    elif visits.shape[0]==56:
         min_val=250
     else:
         sys.exit("wrong shape for density estimator")
@@ -182,39 +81,38 @@ def exploration(density):
 
 
 # main method to do updates
-def save_to_buffer(agent,episode_memory,short=False):
+# def save_to_buffer(agent,episode_memory,short=False):
    
-    episode_next_state=episode_memory[-1][3]
-    episode_done=episode_memory[-1][4]
+#     episode_next_state=episode_memory[-1][3]
+#     episode_done=episode_memory[-1][4]
 
-    # This is a successful trajectory: MC update
-    if episode_done:
-        G=0
-        for entry in reversed(episode_memory):
-            G=entry[2]+agent.gamma*G
-            if not short:
-                agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
-            else:
-                agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
-    
+#     # This is a successful trajectory: MC update
+#     if episode_done:
+#         G=0
+#         for entry in reversed(episode_memory):
+#             G=entry[2]+agent.gamma*G
+#             if not short:
+#                 agent.memory.push(entry[0],entry[1],G,entry[3],episode_done,1)
+#             else:
+#                 agent.short_memory.push(entry[0],entry[1],G,entry[3],episode_done,1)    
 
-    # This is an unsuccessful trajectory: longest n-step return
-    else:
-        i=0
-        G=0
-        for entry in reversed(episode_memory):
-            G=entry[2]+agent.gamma*G
-            agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
-            i+=1
+#     # This is an unsuccessful trajectory: longest n-step return
+#     else:
+#         i=0
+#         G=0
+#         for entry in reversed(episode_memory):
+#             G=entry[2]+agent.gamma*G
+#             agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
+#             i+=1
 
 
 # This is used for one-step TD update
-# def save_to_buffer(agent,episode_memory,short=False):
-#     for entry in (episode_memory):
-#         if not short:
-#             agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
-#         else:
-#             agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+def save_to_buffer(agent,episode_memory,short=False):
+    for entry in (episode_memory):
+        if not short:
+            agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+        else:
+            agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
 
 
 # This is used for average of first 8-step TD updates
@@ -256,6 +154,8 @@ def train(agent,env,address,environment):
     success_rates=[]
     env_coverages=[]
     explorative_dist=[]
+    success_num=0
+    out_of_range=0
 
     # fill all option length bins az zero
     for i in range(40):
@@ -330,6 +230,12 @@ def train(agent,env,address,environment):
                 if not agent.model_access:
                     agent.graph.add_transition(state,action,next_state)
                 state=next_state
+                
+                
+                # skip the states out of range
+                if state[1]>env.observation_space.high[1] or state[1]<env.observation_space.low[1] or state[0]<env.observation_space.low[0] or state[0]>env.observation_space.high[0]:
+                    out_of_range+=1
+                    break
 
                 # agent and env density update
                 agent.density_estimator.increment(state)
@@ -341,15 +247,20 @@ def train(agent,env,address,environment):
                 # recording the success rates and exploration coverage after each checkpoint when the warmup is done
                 frame+=1
                 if frame % checkpoints_interval==0:
-                    print("next checkpoint: "+str(frame)+"  steps")
-                    success_rates.append(evaluation(agent,environment))
+                    result=evaluation(agent,environment)
+                    success_rates.append(result)
                     env_coverages.append(exploration(env_density))
+                    print("next checkpoint: "+str(frame)+"  steps")
+                    print("goal is achieved: "+str(success_num))
+                    print("success rate: "+str(result))
+                    print("out of range:"+str(out_of_range))
+                    print("*"*50)
                         
                 
                 # adding successful trajectory to the short memory
                 if agent.neighbour(next_state[0:2],next_state[-2:]):
+                    success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
-
                 
                 # check if episode is done
                 if done:
@@ -376,14 +287,6 @@ def train(agent,env,address,environment):
             pickle.dump(env_coverages, fp)
     with open(address+"/explorative_dist", "wb") as fp:
             pickle.dump(explorative_dist, fp)
-    
-    # with open(address+"/successful_trajectories", "wb") as fp:
-    #         pickle.dump(agent.short_memory.buffer, fp)
-    # np.save(address+"/visits",agent.density_estimator.visits)
-
-    # save agent nn models
-    # torch.save(agent.actor.state_dict(), address + '/actor.pth')
-    # torch.save(agent.critic.state_dict(), address + '/critic.pth')
 
 
 def main(address,environment,model_avb):
@@ -402,12 +305,12 @@ def main(address,environment,model_avb):
         action_range=np.array((env.action_range,env.action_range))
         density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
         threshold=0.15
-    elif environment=="ant":
-        env=gym.make("AntPush-v1")
+    elif environment=="push":
+        env=gym.make("PointPush-v1")
         num_actions=env.action_space.shape[0]
         num_states=env.observation_space.shape[0]
-        action_range=np.array((30,30,30,30,30,30,30,30))
-        density_estimator=SEstimator(1,40,32,[-20,-4])
+        action_range=np.array((1,0.25))
+        density_estimator=SEstimator(1,28,28,[-14,-2])
         threshold=0.6
     else:
         sys.exit("The environment does not exist!")
@@ -423,7 +326,6 @@ def main(address,environment,model_avb):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-a','--address',required=True)
-    parser.add_argument('-t','--task',required=True)
     parser.add_argument('-e','--environment',required=True)
     parser.add_argument('-m','--model',required=True)
     args = parser.parse_args()
@@ -445,29 +347,4 @@ if __name__ == '__main__':
         print("path is valid with seed: "+str(seed))
     
     # train the agent
-    if args.task=="train":
-        main(args.address,args.environment,args.model=="True")
-    
-    # plot success rates, exploration curves, and destinations of all agents
-    elif args.task=="plot":
-        success_rates=[]
-        locations=[]
-        explorations=[]
-        
-        for i in range(num_agents):
-            with open(args.address+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-                success_rates.append(pickle.load(fp))
-        
-        for i in range(num_agents):
-            with open(args.address+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
-                explorations.append(pickle.load(fp))
-        
-        for i in range(num_agents):
-            with open(args.address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
-                destinations=pickle.load(fp)
-            locations.append([destinations,args.address+"/agent"+str(i+1)])
-        
-        plot(args.address,success_rates=success_rates,locations=locations,explorations=explorations)
-
-    else:
-        pass
+    main(args.address,args.environment,args.model=="True")

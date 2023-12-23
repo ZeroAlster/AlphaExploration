@@ -7,6 +7,8 @@ import random
 import torch.optim as optim
 from torch.autograd import Variable
 import math
+
+
 #hyper params
 ######################################
 replay_buffer_size = 1e6
@@ -17,7 +19,7 @@ max_steps= 100
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-epsilon_decay=0.9999988
+epsilon_decay=0.9999992
 ######################################
 
 

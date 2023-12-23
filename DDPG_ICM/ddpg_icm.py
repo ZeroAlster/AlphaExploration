@@ -21,8 +21,8 @@ max_steps= 100
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
-noise_scale=(0.2,0.2)
-# noise_scale=(0.4,0.05)
+# noise_scale=(0.2,0.2)
+noise_scale=(0.3,0.05)
 ######################################
 
 
@@ -181,7 +181,7 @@ class Agent():
         for state in states:
             cell_x,cell_y=self.point_to_cell(state)
             intrinsic=self.beta/(math.sqrt(self.density_estimator.visits[cell_x][cell_y]))
-            bonus.append([min(intrinsic,1)])
+            bonus.append([min(intrinsic,0.1)])
         
         return bonus
     

@@ -2,7 +2,7 @@ import sys
 import gym
 import mujoco_maze  # noqa
 from mujoco_maze.maze_env import MazeEnv
-sys.path.append("/nfs/home/futuhi/AlphaExploration")
+sys.path.append("/home/futuhi/AlphaExploration")
 import argparse
 from SAC.sac_agent import CustomCallback
 from general.maze import Env
@@ -22,7 +22,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 replay_buffer_size = 1e6
 max_frames  = 6e6
 learning_rate=5e-4
-max_steps   = 100
+max_steps=100
 batch_size  = 128
 seed=random.randint(0,100)
 ######################################
@@ -74,6 +74,12 @@ def main(address,environment):
         sigma=0.15 * np.ones(2)
     elif environment=="point":
         env=gym.make("PointUMaze-v1")
+        sigma=np.ones(2)* 0.4
+        sigma[1]=sigma[1]/8
+    elif environment=="push":
+        env=gym.make("PointPush-v1")
+        plt.imshow(env.render())
+        plt.savefig("cam")
         sigma=np.ones(2)* 0.4
         sigma[1]=sigma[1]/8
     else:
