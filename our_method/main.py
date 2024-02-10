@@ -107,43 +107,43 @@ def exploration(density):
 
 
 # This is used for one-step TD update
-def save_to_buffer(agent,episode_memory,short=False):
-    for entry in (episode_memory):
-        if not short:
-            agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
-        else:
-            agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+# def save_to_buffer(agent,episode_memory,short=False):
+#     for entry in (episode_memory):
+#         if not short:
+#             agent.memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
+#         else:
+#             agent.short_memory.push(entry[0],entry[1],entry[2],entry[3],entry[4],1)
 
 
 # This is used for average of first 8-step TD updates
-# def save_to_buffer(agent,episode_memory,short=False):
-#     for i in range(len(episode_memory)):
-#         states=[]
-#         rewards=[]
-#         steps=[]
-#         dones=[]
-#         reward=0
-#         step=0
-#         for j in range(i,min(len(episode_memory),i+8)):
-#             states.append(episode_memory[j][3])
-#             dones.append(episode_memory[j][4])
-#             reward+=math.pow(agent.gamma,step)*episode_memory[j][2]
-#             step+=1
-#             steps.append(step)
-#             rewards.append(reward)
+def save_to_buffer(agent,episode_memory,short=False):
+    for i in range(len(episode_memory)):
+        states=[]
+        rewards=[]
+        steps=[]
+        dones=[]
+        reward=0
+        step=0
+        for j in range(i,min(len(episode_memory),i+8)):
+            states.append(episode_memory[j][3])
+            dones.append(episode_memory[j][4])
+            reward+=math.pow(agent.gamma,step)*episode_memory[j][2]
+            step+=1
+            steps.append(step)
+            rewards.append(reward)
 
 
-#         while len(states)<8:
-#             states.append(episode_memory[i][0])
-#             rewards.append(0)
-#             steps.append(0)
-#             dones.append(1)
+        while len(states)<8:
+            states.append(episode_memory[i][0])
+            rewards.append(0)
+            steps.append(0)
+            dones.append(1)
                     
-#         # append to memory
-#         if not short:
-#             agent.memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
-#         else:
-#             agent.short_memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
+        # append to memory
+        if not short:
+            agent.memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
+        else:
+            agent.short_memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
         
 
 
@@ -233,9 +233,9 @@ def train(agent,env,address,environment):
                 
                 
                 # skip the states out of range
-                if state[1]>env.observation_space.high[1] or state[1]<env.observation_space.low[1] or state[0]<env.observation_space.low[0] or state[0]>env.observation_space.high[0]:
-                    out_of_range+=1
-                    break
+                # if state[1]>env.observation_space.high[1] or state[1]<env.observation_space.low[1] or state[0]<env.observation_space.low[0] or state[0]>env.observation_space.high[0]:
+                #     out_of_range+=1
+                #     break
 
                 # agent and env density update
                 agent.density_estimator.increment(state)

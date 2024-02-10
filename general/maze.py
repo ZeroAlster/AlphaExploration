@@ -449,8 +449,8 @@ class Env(gym.Env):
 
 
     def reset(self):
-        s_xy=self.to_tensor([0.1470, 0.4662])
-        # s_xy=self.to_tensor([6, 3])
+        # s_xy=self.to_tensor([0.1470, 0.4662])
+        s_xy=self.to_tensor([6, 3])
         g_xy=self.to_tensor([8.8503, 9.1610])
 
         self._state = {
