@@ -20,15 +20,15 @@ import pylab
 
 
 # the seperate legend if it is needed
-colors=["purple","blue","darkorange","green","red"]
-fig = pylab.figure()
-figlegend = pylab.figure(figsize=(13,0.5))
-ax = fig.add_subplot(111)
-lines = ax.plot(range(10), colors[0], range(10), colors[1], range(10), colors[2], range(10), colors[3], range(10), colors[4])
-figlegend.legend(lines, ("DDPG","DDPG + \u03B5t-Greedy (perfect model)","DDPG + \u03B5t-Greedy (replay buffer)","DDPG + GDRB","DDPG + longest ns-tep return"),loc='center',ncol=5)
-fig.show()
-figlegend.show()
-figlegend.savefig('legend.png',bbox_inches='tight')
+# colors=["purple","blue","darkorange","green","red"]
+# fig = pylab.figure()
+# figlegend = pylab.figure(figsize=(13,0.5))
+# ax = fig.add_subplot(111)
+# lines = ax.plot(range(10), colors[0], range(10), colors[1], range(10), colors[2], range(10), colors[3], range(10), colors[4])
+# figlegend.legend(lines, ("DDPG","DDPG + \u03B5t-Greedy (perfect model)","DDPG + \u03B5t-Greedy (replay buffer)","DDPG + GDRB","DDPG + longest ns-tep return"),loc='center',ncol=5)
+# fig.show()
+# figlegend.show()
+# figlegend.savefig('legend.png',bbox_inches='tight')
 
 
 
@@ -320,19 +320,19 @@ figlegend.savefig('legend.png',bbox_inches='tight')
 
 # print number of successes for each agent
 ######################################
-# num_agent=17
-# for  i in range(num_agent):
-#     with open("our_method/results/push/full (perfect model)/agent"+str(i+1)+"/locations", 'rb') as fp:
-#                 locations=pickle.load(fp)
-#     success=0
-#     for k in range(len(locations)):
-#         location=locations[k][0]
-#         # if math.sqrt(math.pow(location[0]-0,2)+math.pow(location[1]-16,2))<=0.6:
-#         # if math.sqrt(math.pow(location[0]-8.8503,2)+math.pow(location[1]-9.1610,2))<=0.15:
-#         if math.sqrt(math.pow(location[0]-4,2)+math.pow(location[1]-24.8,2))<=0.6:
-#             success+=1
-#     print("agent"+str(i+1)+":   "+str(success))
-#     print("frames agent"+str(i+1)+":   "+str(len(locations)))
-#     print("*"*30)
+num_agent=10
+for  i in range(num_agent):
+    with open("PPO/results/mujoco/agent"+str(i+1)+"/locations", 'rb') as fp:
+                locations=pickle.load(fp)
+    success=0
+    for k in range(len(locations)):
+        location=locations[k]
+        if math.sqrt(math.pow(location[0]-0,2)+math.pow(location[1]-16,2))<=0.6:
+        # if math.sqrt(math.pow(location[0]-8.8503,2)+math.pow(location[1]-9.1610,2))<=0.15:
+        # if math.sqrt(math.pow(location[0]-4,2)+math.pow(location[1]-24.8,2))<=0.6:
+            success+=1
+    print("agent"+str(i+1)+":   "+str(success))
+    print("frames agent"+str(i+1)+":   "+str(len(locations)))
+    print("*"*30)
 ######################################
 

@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
-import gym
-from gym import spaces
+import gymnasium
+from gymnasium import spaces
 import random
-
+import math
+from collections import OrderedDict
 class Maze:
     def __init__(self, *segment_dicts, goal_squares=None, start_squares=None):
         self._segments = {'origin': {'loc': (0.0, 0.0), 'connect': set()}}
@@ -344,10 +345,8 @@ segments_crazy = [
 mazes_dict['square_large'] = {'maze': Maze(*segments_crazy, goal_squares='9,9'), 'action_range': 0.95}
 
 
-
-
-class Env(gym.Env):
-    def __init__(self,n=50, maze_type=None):
+class Env(gymnasium.Env):
+    def __init__(self,n=50, maze_type=None,method=None):
         super(Env, self).__init__()
 
         # maze parameters
@@ -355,7 +354,7 @@ class Env(gym.Env):
         self.goal_achievement=0
         self._mazes = mazes_dict
         self.maze_type = maze_type.lower()
-        
+        self.method=method
 
         assert self.maze_type in self._mazes
         self._state = dict(s0=None,n=None, prev_state=None, state=None, goal=None, done=None)
@@ -363,7 +362,17 @@ class Env(gym.Env):
 
         # gym parameters
         self.action_space = spaces.Box(low=-0.95, high=0.95,shape=(2,))
-        self.observation_space = spaces.Box(low=-0.5, high=9.5,shape=(4,), dtype=np.float32)        
+        
+        if self.method in ["SAC","TD3"]:
+            self.observation_space=spaces.Dict(
+                {
+                    "observation": spaces.Box(low=-0.5, high=9.5,shape=(2,), dtype=np.float32),
+                    "achieved_goal": spaces.Box(low=-0.5, high=9.5,shape=(2,), dtype=np.float32),
+                    "desired_goal": spaces.Box(low=-0.5, high=9.5,shape=(2,), dtype=np.float32),
+                }
+            )
+        else:
+            self.observation_space = spaces.Box(low=-0.5, high=9.5,shape=(4,), dtype=np.float32)        
         
         self.reset()
 
@@ -419,16 +428,6 @@ class Env(gym.Env):
             return torch.tensor(10)
         else:
             return torch.tensor(-1)
-        
-    # dense reward function
-    # def reward(self):
-    #     if self.is_done:
-    #         if self.is_success:
-    #             return torch.tensor(15)
-    #         else:
-    #             return -self.dist(self.state,self.goal)
-    #     else:
-    #         return torch.tensor(0)
 
     @property
     def achieved(self):
@@ -448,9 +447,20 @@ class Env(gym.Env):
         return {'state': self._state['s0'].detach(), 'goal': self.goal, 'antigoal': self.achieved}
 
 
-    def reset(self):
-        # s_xy=self.to_tensor([0.1470, 0.4662])
-        s_xy=self.to_tensor([6, 3])
+    def dict_obs(self):     
+
+        return OrderedDict(
+            [
+                ("observation", self.state),
+                ("achieved_goal", self.state),
+                ("desired_goal", self.goal),
+            ]
+        )
+    
+    
+    def reset(self,seed=None, options=None):
+        s_xy=self.to_tensor([0.1470, 0.4662])
+        # s_xy=self.to_tensor([6, 3])
         g_xy=self.to_tensor([8.8503, 9.1610])
 
         self._state = {
@@ -462,10 +472,11 @@ class Env(gym.Env):
             'done': False,
         }
 
-        # gym requirement: we need to use goal together with current state as input to the agent
-        obs=torch.cat([self.state,self.goal],dim=0)
-
-        return obs.numpy()
+        if self.method in ["SAC","TD3"]:
+            return self.dict_obs(),{}
+        else:
+            obs=torch.cat([self.state,self.goal],dim=0)
+            return obs.numpy()
 
     def step(self, action):
         try:
@@ -482,23 +493,32 @@ class Env(gym.Env):
         self._state['n'] += 1
         self._state['done'] = (self._state['n'] >= self.n) or self.is_success
 
-        # reward
         r=float(self.reward())
-
-        # gym requirement: we need to use goal together with current state as input to the agent
-        nx_obs=torch.cat([self.state,self.goal],dim=0)
 
         if self.is_success:
             self.goal_achievement+=1
-        
-        return nx_obs.numpy(),r,bool(self._state['done']),{}
+
+        if self.method in ["SAC","TD3"]:
+            truncated=self._state['n'] >= self.n
+            return self.dict_obs(),r,self.is_success,truncated,{}
+        else:
+            nx_obs=torch.cat([self.state,self.goal],dim=0)
+            return nx_obs.numpy(),r,bool(self._state['done']),{}
     
 
-    # gym requirement
+    def compute_reward(self, achieved_goal,desired_goal, _info):
+        a=np.power(achieved_goal-desired_goal,2)
+        outcome=np.zeros((a.shape[0],1))
+        for i in range(a.shape[0]):
+            d = np.sqrt(a[i][0]+a[i][1])
+            if d <= self.dist_threshold:
+                outcome[i][0]=10
+            else:
+                outcome[i][0]=-1
+        return outcome
+
     def render(self):
         pass
 
-    
-    # gym requirement
     def close(self):
         pass
