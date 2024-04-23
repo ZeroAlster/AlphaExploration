@@ -4,6 +4,7 @@ from general.maze import Env
 import math
 import gym
 import sys
+import gymnasium
 
 #hyper params
 ######################################
@@ -39,6 +40,12 @@ class CustomCallback(BaseCallback):
             self.len_episode=500
             self.goal=[4,24.8]
             self.threshold=0.6
+        elif self.environment=="fetch-reach":
+            self.threshold= 0.05
+        elif self.environment=="fetch-slide":
+            self.threshold= 0.05
+        elif self.environment=="fetch-push":
+            self.threshold= 0.05
 
     def _on_training_start(self) -> None:
         """
@@ -51,13 +58,9 @@ class CustomCallback(BaseCallback):
 
     def _on_step(self) -> bool:
 
-        if self.locals["dones"][0] or self.locals["infos"][0]["TimeLimit.truncated"]:
-            achieved_goal=self.locals["infos"][0]["terminal_observation"]["observation"]
-            if math.sqrt(math.pow(achieved_goal[0]-self.goal[0],2)+math.pow(achieved_goal[1]-self.goal[1],2))<=self.threshold:
-                self.success+=1
-            self.locations.append(self.locals["infos"][0]["terminal_observation"])
+        if self.locals["infos"][0]["is_success"]!=0:
+            self.success+=1
 
-        
         if self.num_timesteps % self.checkpoint==0:
             print("next checkpoint: "+str(self.num_timesteps)+"  steps")
             print("goal is achieved: "+str(self.success))
@@ -68,16 +71,23 @@ class CustomCallback(BaseCallback):
                 env=Env(n=self.len_episode,maze_type='square_large',method=self.method)
             elif self.environment=="push":
                 env=gym.make("PointPush-v1")
+            elif self.environment=="fetch-reach":
+                env=gymnasium.make('FetchReach-v2')
+            elif self.environment=="fetch-push":
+                env=gymnasium.make('FetchPush-v2')
+            elif self.environment=="fetch-slide":
+                env=gymnasium.make('FetchSlide-v2') 
 
             success=0
             for _ in range(evaluation_attempts):
                 obs,_ = env.reset()
                 done=False
                 truncated=False
-                while (not done) and (not truncated):
-                    action,_=self.model.predict(obs, deterministic=False)
+                r=-1
+                while (not done) and (not truncated) and (r!=0):
+                    action,_=self.model.predict(obs, deterministic=True)
                     obs,r, done,truncated,_= env.step(action)
-                if r>0:
+                if r==0:
                     success+=1
             self.success_rates.append(success/evaluation_attempts)
 
@@ -87,8 +97,8 @@ class CustomCallback(BaseCallback):
         pass
 
     def _on_training_end(self) -> None:
-        with open(self.path+"/locations", "wb") as fp:
-            pickle.dump(self.locations, fp)
+        # with open(self.path+"/locations", "wb") as fp:
+        #     pickle.dump(self.locations, fp)
 
         with open(self.path+"/success_rates", "wb") as fp:
             pickle.dump(self.success_rates, fp)

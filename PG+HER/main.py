@@ -9,7 +9,7 @@ from mujoco_maze.maze_env import MazeEnv
 sys.path.append("/home/futuhi/AlphaExploration")
 from wrappers import CustomCallback
 from general.maze import Env
-from stable_baselines3 import SAC,PPO,TD3,HerReplayBuffer
+from stable_baselines3 import SAC,PPO,TD3,HerReplayBuffer,DDPG
 from stable_baselines3.common.noise import NormalActionNoise
 
 #hyper params
@@ -35,19 +35,33 @@ def main(address,environment,method,seed):
     if environment=="maze":
         env=Env(n=max_steps,maze_type='square_large',method=method)
         sigma=0.15 * np.ones(2)
+        action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
     elif environment=="point":
         env=gym.make("PointUMaze-v1")
         sigma=np.ones(2)* 0.4
         sigma[1]=sigma[1]/8
+        action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
     elif environment=="push":
         env=gym.make("PointPush-v1")
         sigma=np.ones(2)* 0.4
         sigma[1]=sigma[1]/8
+        action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
+    elif environment=="fetch-reach":
+        env=gymnasium.make('FetchReach-v2')
+        sigma=0.15 * np.ones((1,4))
+        action_noise = NormalActionNoise(mean=np.zeros((1,4)), sigma=sigma)
+    elif environment=="fetch-push":
+        env=gymnasium.make('FetchPush-v2')
+        sigma=0.15 * np.ones((1,4))
+        action_noise = NormalActionNoise(mean=np.zeros((1,4)), sigma=sigma)
+    elif environment=="fetch-slide":
+        env=gymnasium.make('FetchSlide-v2')
+        sigma=0.15 * np.ones((1,4))
+        action_noise = NormalActionNoise(mean=np.zeros((1,4)), sigma=sigma)
     else:
         sys.exit("environment is not valid")
     
     # for SAC and TD3
-    action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
     goal_selection_strategy = "future"
     policy_kwargs = dict(net_arch=dict(pi=[128,128,128], qf=[128,128,128]))
 
@@ -61,8 +75,11 @@ def main(address,environment,method,seed):
                 learning_rate=learning_rate,seed=seed,device="cuda")
     elif method=="TD3":
         agent = TD3("MultiInputPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
-                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(10,"step"),action_noise=action_noise,learning_starts=warmup,
+                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(12,"step"),action_noise=action_noise,learning_starts=warmup,
                 replay_buffer_class=HerReplayBuffer, replay_buffer_kwargs=dict(n_sampled_goal=4,goal_selection_strategy=goal_selection_strategy))
+    elif method=="DDPG":
+        agent = DDPG("MultiInputPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
+                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(12,"step"),action_noise=action_noise,learning_starts=warmup)
     else:
         sys.exit("method is not valid")
 

@@ -162,9 +162,10 @@ def train(agent,env,address,environment):
         explorative_dist.append(0)
 
     # define an estimator for the exploration curve
-    density_height=env.observation_space.high[0]-env.observation_space.low[0]
-    density_width=env.observation_space.high[1]-env.observation_space.low[1]
-    env_density=SEstimator(0.5,density_height,density_width,[env.observation_space.low[0],env.observation_space.low[1]])
+    if "fetch" not in environment:
+        density_height=env.observation_space.high[0]-env.observation_space.low[0]
+        density_width=env.observation_space.high[1]-env.observation_space.low[1]
+        env_density=SEstimator(0.5,density_height,density_width,[env.observation_space.low[0],env.observation_space.low[1]])
     
     # warmup period
     frame=0
@@ -312,6 +313,27 @@ def main(address,environment,model_avb):
         action_range=np.array((1,0.25))
         density_estimator=SEstimator(1,28,28,[-14,-2])
         threshold=0.6
+    elif environment=="fetch-slide":
+        env=gym.make('FetchSlide-v1')
+        num_actions=env.action_space.shape[0]
+        num_states=env.observation_space["observation"].shape[0]
+        threshold=0.05
+        action_range=np.array((1,1,1,1))
+        density_estimator=None
+    elif environment=="fetch-push":
+        env=gym.make('FetchPush-v1')
+        num_actions=env.action_space.shape[0]
+        num_states=env.observation_space["observation"].shape[0]
+        threshold=0.05
+        action_range=np.array((1,1,1,1))
+        density_estimator=None
+    elif environment=="fetch-reach":
+        env=gym.make('FetchReach-v1')
+        num_actions=env.action_space.shape[0]
+        num_states=env.observation_space["observation"].shape[0]
+        threshold=0.05
+        action_range=np.array((1,1,1,1))
+        density_estimator=None
     else:
         sys.exit("The environment does not exist!")
 
