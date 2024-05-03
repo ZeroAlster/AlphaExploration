@@ -21,9 +21,9 @@ import os
 #hyper params
 ######################################
 replay_buffer_size = 1e6
-hidden_size=128
-actor_learning_rate=1e-4
-critic_learning_rate=1e-3
+hidden_size=256
+actor_learning_rate=2e-3
+critic_learning_rate=2e-3
 epsilon_decay=0.9999992
 epsilon=1
 RRT_budget=40
@@ -200,9 +200,14 @@ class Agent():
         elif self.simulator=="push":
             self.model=gym.make("PointPush-v1")
             self.graph=Graph(0.2,[-14,-2],28)
+        elif self.simulator=="fetch-slide":
+            self.graph=density_estimator
+        elif self.simulator=="fetch-push":
+            self.graph=density_estimator
+        elif self.simulator=="fetch-reach":
+            self.graph=density_estimator
         else:
             sys.exit("simulator is not valid.")
-
 
         # Networks
         self.actor = Actor(self.num_states, hidden_size, self.num_actions,action_range)
@@ -249,7 +254,7 @@ class Agent():
         return new_coordination
 
 
-    def RRT(self,coordination):
+    def RRT(self,coordination,env):
         nodes=[]
         root=Node(None,coordination)
         nodes.append(root)
@@ -261,11 +266,11 @@ class Agent():
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
             
-            action=np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),))
-            model_response=self.step(node,action)
-
-            # skip out of range states
-            if model_response[1]>self.model.observation_space.high[1] or model_response[1]<self.model.observation_space.low[1] or model_response[0]<self.model.observation_space.low[0] or model_response[0]>self.model.observation_space.high[0]:
+            if "fetch" not in self.simulator:
+                action=np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),))
+                model_response=self.step(node,action)
+                # skip out of range states
+                if model_response[1]>self.model.observation_space.high[1] or model_response[1]<self.model.observation_space.low[1] or model_response[0]<self.model.observation_space.low[0] or model_response[0]>self.model.observation_space.high[0]:
                     continue
 
             if self.model_access:
@@ -276,10 +281,13 @@ class Agent():
                     new_coordination=dic_obs
                     action=dic_action    
                 else:
-                    new_coordination=model_response
-                    child=Node((node,action),new_coordination)
-                    nodes.append(child)
-                    goal=child
+                    if "fetch" not in self.simulator:
+                        new_coordination=model_response
+                        child=Node((node,action),new_coordination)
+                        nodes.append(child)
+                        goal=child
+                    else:
+                        goal=root
                     break
             
             # creating the new node and adding it to the tree
@@ -287,15 +295,20 @@ class Agent():
             nodes.append(child)
 
             # check if we hit the goal
-            if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
+            # if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
+            if self.neighbour(env.desired_goal,env.achieved_goal):
                 goal=child
                 break
 
-            # update the goal to be the node with minimum visit
-            cell_x,cell_y=self.point_to_cell(new_coordination)
-            goal_cell_x,goal_cell_y=self.point_to_cell(goal.coordination)
-            if self.density_estimator.visits[cell_x][cell_y] <self.density_estimator.visits[goal_cell_x][goal_cell_y]:
-                goal=child
+            if "fetch" not in self.simulator:
+                # update the goal to be the node with minimum visit
+                cell_x,cell_y=self.point_to_cell(new_coordination)
+                goal_cell_x,goal_cell_y=self.point_to_cell(goal.coordination)
+                if self.density_estimator.visits[cell_x][cell_y] <self.density_estimator.visits[goal_cell_x][goal_cell_y]:
+                    goal=child
+            else:
+                if self.graph.get_density(new_coordination)<self.graph.get_density(goal.coordination):
+                    goal=child
         
         
         # if the goal is the root, randomly select one of the other nodes 
@@ -318,14 +331,14 @@ class Agent():
     
     
     # main function
-    def get_action(self, state,warmup,evaluation=False):
+    def get_action(self, state,warmup,env,evaluation=False):
         
         if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
             
             exploration=True
             
             # we will output an option by RRT or a random action
-            option= self.RRT(state)
+            option= self.RRT(state,env)
 
             # record option length for distribution in the tree
             length=len(option)
@@ -385,6 +398,7 @@ class Agent():
         next_states = torch.FloatTensor(np.array(next_states)).to(device)
         done=torch.FloatTensor(np.array([1-i for i in done])).to(device)
         steps=torch.FloatTensor(np.array(steps)).to(device)
+
         
         # Critic loss        
         Qvals = self.critic.forward(states, actions)
@@ -399,7 +413,7 @@ class Agent():
 
         # Actor loss
         policy_loss = -self.critic.forward(states, self.actor.forward(states)).mean()
-        
+
         # update networks
         self.actor_optimizer.zero_grad()
         policy_loss.backward()

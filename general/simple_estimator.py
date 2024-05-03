@@ -1,7 +1,6 @@
 import numpy as np
 import math
 
-
 minimum_visit=0.01
 
 class SEstimator:

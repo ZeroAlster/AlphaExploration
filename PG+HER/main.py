@@ -63,7 +63,7 @@ def main(address,environment,method,seed):
     
     # for SAC and TD3
     goal_selection_strategy = "future"
-    policy_kwargs = dict(net_arch=dict(pi=[128,128,128], qf=[128,128,128]))
+    policy_kwargs = dict(net_arch=dict(pi=[256,256,256], qf=[256,256,256]))
 
     if method=="SAC":
         agent = SAC("MultiInputPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
@@ -75,11 +75,11 @@ def main(address,environment,method,seed):
                 learning_rate=learning_rate,seed=seed,device="cuda")
     elif method=="TD3":
         agent = TD3("MultiInputPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
-                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(12,"step"),action_noise=action_noise,learning_starts=warmup,
+                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(5,"step"),action_noise=action_noise,learning_starts=warmup,
                 replay_buffer_class=HerReplayBuffer, replay_buffer_kwargs=dict(n_sampled_goal=4,goal_selection_strategy=goal_selection_strategy))
     elif method=="DDPG":
         agent = DDPG("MultiInputPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
-                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(12,"step"),action_noise=action_noise,learning_starts=warmup)
+                learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(5,"step"),action_noise=action_noise,learning_starts=warmup)
     else:
         sys.exit("method is not valid")
 

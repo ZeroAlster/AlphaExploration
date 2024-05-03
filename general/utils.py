@@ -12,35 +12,36 @@ import pylab
 
 # plot success rate for the paper
 #####################################
-def plot_success():
-    success1=[]
-    success2=[]
-    address1="our_method/results/push/update/avg8-step-TD"
-    address2="our_method/results/push/full (perfect model)"
+def plot_success(num_agents,num_methods,environment):
+    all_success=[]
+    for _ in range(num_methods):
+         all_success.append([])
 
+    address1="DDPG/results/"+environment
+    address2="our_method/results/"+environment
+    address3="PG+HER/SAC/"+environment
+    address4="PG+HER/TD3/"+environment
 
-    for i in range(5):
-        with open(address1+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-            success1.append(pickle.load(fp))
-    for i in range(17):
-        if i==15 or i==16:
-             continue
-        with open(address2+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
-                success2.append(pickle.load(fp))
+    addresses=[]
+    addresses.append(address1)
+    addresses.append(address2)
+    addresses.append(address3)
+    addresses.append(address4)
+         
+
+    for j in range(num_methods):
+        for i in range(num_agents):
+            with open(addresses[j]+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+                all_success[j].append(pickle.load(fp))
 
 
     plt.figure()
     ax = plt.subplot(111)
-    all_success=[]
-    colors=["blue","red"]
-    all_success.append(success1)
-    all_success.append(success2)
+    colors=["blue","red","green","brown"]
 
 
-
-    for k in range(2):
-
-        number=len(all_success[0][0])
+    for k in range(num_methods):
+        number=len(all_success[k][0])
 
         std=[]
         mean=[]
@@ -50,16 +51,13 @@ def plot_success():
         beta=10
         while i < number:
             values=[]
-            agents=len(all_success[k])
-            
-            for j in range(agents):
+            for j in range(num_agents):
                 values.append(all_success[k][j][i])
             mean.append(sum(values)/len(values))
             std.append(statistics.pstdev(values))
             horizon.append(i/beta)
 
             i+=beta
-        
 
         mean=np.array(mean)
         std=np.array(std)
@@ -72,8 +70,6 @@ def plot_success():
         Y_=np.minimum(Y_,1)
         Y_=np.maximum(Y_,0)
         plt.plot(X_, Y_,color=colors[k])
-        
-        # ax.plot(horizon,mean,color=colors[k])
 
         # fix the error bar
         std=std*0.6
@@ -87,7 +83,7 @@ def plot_success():
 
     plt.title("success rate")
     plt.xlabel("checkpoints")
-    plt.savefig("test")
+    plt.savefig("general/final_figures/"+environment+"/success rates")
 
 
 # plot environment coverage for the paper
@@ -175,7 +171,6 @@ def plot_coverage():
 
 # plot a legend for each plot
 ######################################
-
 def plot_legend():
      
     colors=["darkorange","blue","red","green","purple","saddlebrown","aqua"]
@@ -224,9 +219,11 @@ if __name__ == '__main__':
     parser.add_argument('-e','--environment')
     parser.add_argument('-m','--method')
     parser.add_argument('-agents',help='number of agents')
+    parser.add_argument('-curves',help='number of methods to plot')
     args = parser.parse_args()
 
     
-    num_success(int(args.agents),args.address,args.environment)
+    # num_success(int(args.agents),args.address,args.environment)
     # plot_coverage()
     # plot_legend()
+    plot_success(int(args.agents),int(args.curves),args.environment)
