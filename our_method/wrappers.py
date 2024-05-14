@@ -1,27 +1,34 @@
-import gym
+import gymnasium
 import numpy as np
-from gym import spaces
+import sys
 
-def get_state(state):
-    return np.concatenate((state["observation"],state["desired_goal"]))
-
-
-class FetchWrapper(gym.Wrapper):
+class FetchWrapper(gymnasium.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.env = env
         self.achieved_goal=None
         self.desired_goal=None
+        self.success=0
     
-    def reset(self):
+    def reset(self,seed=None):
         super().reset()
-        state=self.env.reset()
-        self.achieved_goal=state["achieved_goal"]
-        self.desired_goal=state["desired_goal"]
-        return get_state(state)
+        state,_=self.env.reset()
+
+        self.success=0
+
+        return state
         
-    def step(self, action):
-        next_state, reward, done, info = self.env.step(action)
-        self.achieved_goal=next_state["achieved_goal"]
-        self.desired_goal=next_state["desired_goal"]
-        return get_state(next_state), reward, done, info
+    def step(self, action,sim_state=None):
+        
+        next_state, reward, terminated,truncated, info = self.env.step(action,sim_state=sim_state)
+
+        # get success
+        self.success=info["success"]
+
+        # get done
+        if terminated or truncated:
+            done=True
+        else:
+            done=False
+        
+        return next_state, reward, done, info

@@ -1,20 +1,25 @@
 from simhash import Simhash
 import random
-import sys
+import numpy as np
 
 class Model:
-    def __init__(self,env):
+    def __init__(self,env,item_dim=3,dim_key=64,bucket_size=10000):
         self.transitions={}
         self.densities={}
         self.env=env
-        self.granularity=self.set_granularity()
+        self.projection_matrix = np.random.normal(size=(item_dim, dim_key))
 
-
-    def set_granularity(self):
-        if self.env=="reach":
-            return 16
-        else:
-            return 16
+        
+        # precompute modulos of powers of 2
+        mods_list = []
+        mod = 1
+        mods = []
+        for _ in range(dim_key):
+            mods.append(mod)
+            mod = (mod * 2) % bucket_size
+        mods_list.append(mods)
+        self.mods_list = np.asarray(mods_list).T
+        self.bucket_size=bucket_size
     
     def find(self,state):         
         hash=self.pos(state)
@@ -47,17 +52,9 @@ class Model:
         self.densities={}
 
     def pos(self,state):
-        # get the coordinates
-        if self.env=="reach":
-            coordinates=state[0:3]
-        elif self.env=="push" or self.env=="slide":
-            coordinates=state[0:6] 
-        else:
-            raise TypeError("the environment is not allowed.")
+        coordinates=np.round(state[0:3],3)
 
-        coord_str = ",".join(map(str, coordinates))
-        simhash_value = Simhash(coord_str,f=self.granularity)
-        simhash_hex_str = simhash_value.value
-        return simhash_hex_str
+        binary=np.sign(coordinates.dot(self.projection_matrix))
+        keys = np.cast['int'](binary.dot(self.mods_list)) % self.bucket_size
 
-
+        return keys[0]

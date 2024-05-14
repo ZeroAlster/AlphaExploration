@@ -2,24 +2,22 @@ import sys
 sys.path.append("/home/futuhi/AlphaExploration")
 import argparse
 from general.maze import Env
-from IPython.display import clear_output
-from matplotlib import animation
-import matplotlib.pyplot as plt
-from IPython.display import display
 import numpy as np
 import pickle
 import random
-import statistics
 from our_method.agent import Agent
 from general.simple_estimator import minimum_visit
 import torch
+import copy
 import os
 import gym
-import math
 import mujoco_maze  # noqa
+import imageio
 from general.simple_estimator import SEstimator
 from wrappers import FetchWrapper
 from general.FetchGraph import Model
+from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
+                            ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
 
 # current version: Main method
 
@@ -31,36 +29,31 @@ batch_size  = 256
 num_updates=30
 checkpoints_interval=10000
 evaluation_attempts=10
-warm_up=20000
+warm_up=5000
 ######################################
 
-    
 
 def evaluation(agent,environment):
-    if environment=="maze":
-        env_test=Env(n=max_steps,maze_type='square_large')
-    elif environment=="point":
-        env_test=gym.make("PointUMaze-v1")
-    elif environment=="push":
-        env_test=gym.make("PointPush-v1")
-    elif environment=="fetch-slide":
-        env_test=FetchWrapper(gym.make('FetchSlide-v1'))
-    elif environment=="fetch-push":
-        env_test=FetchWrapper(gym.make('FetchPush-v1'))
-    elif environment=="fetch-reach":
-        env_test=FetchWrapper(gym.make('FetchReach-v1'))
+    
+    if "v2" not in environment:
+        if environment=="maze":
+            env_test=Env(n=max_steps,maze_type='square_large')
+        elif environment=="point":
+            env_test=gym.make("PointUMaze-v1")
+        elif environment=="push":
+            env_test=gym.make("PointPush-v1")
     else:
-        raise TypeError("the environment is not allowed.")
+        env_test=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
     
     success=0
     for _ in range(evaluation_attempts):
         obs = env_test.reset()
         done=False
         while not done:
-            action,_,_ = agent.get_action(obs,env=env_test,warmup=False,evaluation=True)
+            action,_,_ = agent.get_action(obs,warmup=False,evaluation=True)
             obs,_,done,_= env_test.step(action[0])
-        # if agent.neighbour(obs[0:2],obs[-2:]):
-        if agent.neighbour(env_test.desired_goal,env_test.achieved_goal):
+        
+        if env_test.success:
             success+=1
     
     return success/evaluation_attempts
@@ -89,7 +82,7 @@ def exploration(density):
 
 # main method to do updates
 def save_to_buffer(agent,episode_memory,short=False):
-   
+
     episode_next_state=episode_memory[-1][3]
     episode_done=episode_memory[-1][4]
 
@@ -156,18 +149,20 @@ def save_to_buffer(agent,episode_memory,short=False):
 
 def train(agent,env,address,environment):
     
+    print('Setting environment variable to use GPU rendering:')
+    os.environ["MUJOCO_GL"]="egl"
+    
     #define variables for plotting
     success_rates=[]
     explorative_dist=[]
     success_num=0
+    destinations=[]
 
     # fill all option length bins az zero
-    for i in range(40):
+    for _ in range(40):
         explorative_dist.append(0)
 
-    # define required variables for maze environments
-    if "fetch" not in environment:
-        destinations=[]
+    if "v2" not in environment:
         env_coverages=[]
         out_of_range=0
         density_height=env.observation_space.high[0]-env.observation_space.low[0]
@@ -177,16 +172,18 @@ def train(agent,env,address,environment):
     # warmup period
     frame=0
     while frame<warm_up:
-        state = env.reset()
-        done=False
+        
         episode_memory=[]
+        state= env.reset()
+        done=False
         terminal=state
+        
         while not done:
-            option,_,_ = agent.get_action(state,env=env,warmup=True)
+            option,_,_ = agent.get_action(state,warmup=True)
             for action in option:
-                next_state, reward, done, _ = env.step(action)
-                
-                if "fetch" not in environment:
+                next_state, reward, done, _ = env.step(action)  
+
+                if "v2" not in environment:
                     episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
                     # graph update if model is not available
                     if not agent.model_access:
@@ -194,42 +191,47 @@ def train(agent,env,address,environment):
                     # agent and env density update
                     agent.density_estimator.increment(state)
                     env_density.increment(state)
-                    # recording the last location in each episode
-                    terminal=state
                     # recording exploration rate during warmup
                     if frame % checkpoints_interval==0:
                         env_coverages.append(exploration(env_density))
                 else:
-                    episode_memory.append([state, action, reward, next_state, float(agent.neighbour(env.desired_goal,env.achieved_goal))])
+                    episode_memory.append([state, action, reward, next_state, float(env.success)])
                     agent.graph.add_transition(state,action,next_state)
                     agent.graph.increment(state)
-                    if agent.neighbour(env.desired_goal,env.achieved_goal):
-                        agent.graph.reset()
                 
                 state=next_state
-                # check if episode is done
                 frame+=1
+
+                # recording the last location in each episode
+                terminal=state
+
+                # check if episode is done
+                if env.success:
+                    success_num+=1
+                    save_to_buffer(agent,episode_memory,short=True)
+                    save_to_buffer(agent,episode_memory)
+    
                 if done:
                     save_to_buffer(agent,episode_memory)
                     break
-                    
-        
-        if "fetch" not in environment:
-            # recording terminal states
-            destinations.append([terminal,frame])
+                          
+        # recording terminal states
+        destinations.append([terminal,frame])
+
 
     print("warmup has ended!")
 
     # train and save the model
+    frames = []
     while frame<max_frames:
         
         state = env.reset()
         done=False
         episode_memory=[]
         terminal=state
-        
+
         while not done:
-            option,e,l = agent.get_action(state,env=env,warmup=False)
+            option,e,l = agent.get_action(state,warmup=False)
 
             # record explorative option length
             if e:
@@ -237,9 +239,9 @@ def train(agent,env,address,environment):
 
             for action in option:
                 next_state, reward, done,_= env.step(action)
-                
-                
-                if "fetch" not in environment:
+                frames.append(env.render())
+
+                if "v2" not in environment:
                     episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
                     # graph update if model is not available
                     if not agent.model_access:
@@ -247,19 +249,18 @@ def train(agent,env,address,environment):
                     # agent and env density update
                     agent.density_estimator.increment(state)
                     env_density.increment(state)
-                    # recording the last location in each episode
-                    terminal=state
                 else:
-                    episode_memory.append([state, action, reward, next_state, float(agent.neighbour(env.desired_goal,env.achieved_goal))])
-                    agent.graph.add_transition(state,action,next_state)
-                    agent.graph.increment(state)
-                    if agent.neighbour(env.desired_goal,env.achieved_goal):
-                        agent.graph.reset()                    
+                    episode_memory.append([state, action, reward, next_state, float(env.success)])
+                    agent.graph.add_transition(state,action,next_state) 
+                    agent.graph.increment(state)                   
 
                 state=next_state
-                
-                # recording the success rates and exploration coverage after each checkpoint when the warmup is done
                 frame+=1
+
+                # recording the last location in each episode
+                terminal=state
+
+                # recording the success rates and exploration coverage after each checkpoint when the warmup is done
                 if frame % checkpoints_interval==0:
                     result=evaluation(agent,environment)
                     success_rates.append(result)
@@ -273,18 +274,21 @@ def train(agent,env,address,environment):
                 
                 # adding successful trajectory to the short memory
                 # if agent.neighbour(next_state[0:2],next_state[-2:])
-                if agent.neighbour(env.desired_goal,env.achieved_goal):
+                if env.success:
                     success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
+                    save_to_buffer(agent,episode_memory)
+                    imageio.mimsave("recording.mp4", frames, fps=80)
+                    print(done)
+                    sys.exit()
                 
                 # check if episode is done
                 if done:
                     save_to_buffer(agent,episode_memory)
                     break
 
-        if "fetch" not in environment:
-            # recording terminal states
-            destinations.append([terminal,frame])
+        # recording terminal states
+        destinations.append([terminal,frame])
 
         # set number of updates from short memory (off for one-buffer settings)
         agent.short_memory_updates=int((frame/max_frames)*num_updates)
@@ -295,8 +299,8 @@ def train(agent,env,address,environment):
         
 
     # record training results: terminal states,success rates, environment coverage, and visits array
-    # with open(address+"/locations", "wb") as fp:
-    #         pickle.dump(destinations, fp)
+    with open(address+"/locations", "wb") as fp:
+            pickle.dump(destinations, fp)
     with open(address+"/success_rates", "wb") as fp:
             pickle.dump(success_rates, fp)
     # with open(address+"/env_coverage", "wb") as fp:
@@ -307,54 +311,41 @@ def train(agent,env,address,environment):
 
 def main(address,environment,model_avb):
     # initiate the environment, get action and state space size, and get action range
-    if environment =="point":
-        env=gym.make("PointUMaze-v1")
-        num_actions=env.action_space.shape[0]
-        num_states=env.observation_space.shape[0]
-        action_range=np.array((1,0.25))
-        density_estimator=SEstimator(1,20,20,[-2,-2])
-        threshold=0.6
-    elif environment=="maze":
-        env=Env(n=max_steps,maze_type='square_large')
-        num_actions = env.action_size
-        num_states  = env.state_size*2
-        action_range=np.array((env.action_range,env.action_range))
-        density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
-        threshold=0.15
-    elif environment=="push":
-        env=gym.make("PointPush-v1")
-        num_actions=env.action_space.shape[0]
-        num_states=env.observation_space.shape[0]
-        action_range=np.array((1,0.25))
-        density_estimator=SEstimator(1,28,28,[-14,-2])
-        threshold=0.6
-    elif environment=="fetch-slide":
-        env=FetchWrapper(gym.make('FetchSlide-v1'))
-        num_actions=env.action_space.shape[0]
-        num_states=env.observation_space["observation"].shape[0]+env.observation_space["desired_goal"].shape[0]
-        threshold=0.05
-        action_range=np.array((1,1,1,1))
-        density_estimator=Model(env="slide")
-    elif environment=="fetch-push":
-        env=FetchWrapper(gym.make('FetchPush-v1'))
-        num_actions=env.action_space.shape[0]
-        num_states=env.observation_space["observation"].shape[0]+env.observation_space["desired_goal"].shape[0]
-        threshold=0.05
-        action_range=np.array((1,1,1,1))
-        density_estimator=Model(env="push")
-    elif environment=="fetch-reach":
-        env=FetchWrapper(gym.make('FetchReach-v1'))
-        num_actions=env.action_space.shape[0]
-        num_states=env.observation_space["observation"].shape[0]+env.observation_space["desired_goal"].shape[0]
-        threshold=0.05
-        action_range=np.array((1,1,1,1))
-        density_estimator=Model(env="reach")
+    if "v2" not in environment:
+        if environment =="point":
+            env=gym.make("PointUMaze-v1")
+            num_actions=env.action_space.shape[0]
+            num_states=env.observation_space.shape[0]
+            action_range=np.array((1,0.25))
+            density_estimator=SEstimator(1,20,20,[-2,-2])
+            threshold=0.6
+        elif environment=="maze":
+            env=Env(n=max_steps,maze_type='square_large')
+            num_actions = env.action_size
+            num_states  = env.state_size*2
+            action_range=np.array((env.action_range,env.action_range))
+            density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
+            threshold=0.15
+        elif environment=="push":
+            env=gym.make("PointPush-v1")
+            num_actions=env.action_space.shape[0]
+            num_states=env.observation_space.shape[0]
+            action_range=np.array((1,0.25))
+            density_estimator=SEstimator(1,28,28,[-14,-2])
+            threshold=0.6
+        else:
+            raise ValueError("The environment does not exist")
     else:
-        sys.exit("The environment does not exist!")
-
+        env=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
+        num_actions=env.action_space.shape[0]
+        num_states=env.observation_space.shape[0]
+        threshold=None
+        action_range=np.array((1,1,1,1))
+        density_estimator=Model(env=environment)
+        env_copy=copy.deepcopy(env)
     
     # initiate the agent
-    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb)
+    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,env_copy=env_copy)
     
     # train the agent
     train(agent,env,address,environment)
@@ -367,7 +358,6 @@ if __name__ == '__main__':
     parser.add_argument('-m','--model',required=True)
     args = parser.parse_args()
 
-    
     # set random seeds
     seed=random.randint(0,1000)
     torch.manual_seed(seed)
@@ -376,7 +366,6 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     random.seed(seed)
     np.random.seed(seed)
-
     
     if  not os.path.exists(args.address):
         sys.exit("The path is wrong!")

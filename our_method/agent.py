@@ -14,20 +14,17 @@ import sys
 import gym 
 import mujoco_maze  # noqa
 import mujoco_maze.maze_env
-import tempfile
-import os
-
 
 #hyper params
 ######################################
 replay_buffer_size = 1e6
-hidden_size=256
-actor_learning_rate=2e-3
-critic_learning_rate=2e-3
+hidden_size=128
+actor_learning_rate=1e-3
+critic_learning_rate=1e-3
 epsilon_decay=0.9999992
 epsilon=1
 RRT_budget=40
-max_steps   = 100
+max_steps= 100
 short_memory_size=int(5e4)
 tau=1e-2
 gamma=0.99
@@ -37,7 +34,6 @@ minimum_exploration=0.01
 
 # cpu or gpu
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 
 
 class Node:
@@ -141,8 +137,6 @@ class Critic(nn.Module):
         return x
     
 
-
-
 class Actor(nn.Module):
     def __init__(self, input_size, hidden_size, output_size,action_range,init_w=3e-3):
         super(Actor, self).__init__()
@@ -172,7 +166,7 @@ class Actor(nn.Module):
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,
+    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,env_copy,
                  hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, 
                  gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
         
@@ -200,12 +194,9 @@ class Agent():
         elif self.simulator=="push":
             self.model=gym.make("PointPush-v1")
             self.graph=Graph(0.2,[-14,-2],28)
-        elif self.simulator=="fetch-slide":
+        elif "v2" in self.simulator:
             self.graph=density_estimator
-        elif self.simulator=="fetch-push":
-            self.graph=density_estimator
-        elif self.simulator=="fetch-reach":
-            self.graph=density_estimator
+            self.model=env_copy
         else:
             sys.exit("simulator is not valid.")
 
@@ -244,17 +235,20 @@ class Agent():
         
     def step(self,node,action):
 
-        if self.simulator=="maze":
-            self.model._state['state']=self.model.to_tensor(node.coordination[0:2])
-            new_coordination,_,_,_=self.model.step(action)
-        elif self.simulator=="point" or self.simulator=="push":
-            new_coordination,_,_,_=self.model.planning_step(node.coordination,action)
+        if "v2" not in self.simulator:
+            if self.simulator=="maze":
+                self.model._state['state']=self.model.to_tensor(node.coordination[0:2])
+                new_coordination,_,_,_=self.model.step(action)
+            elif self.simulator=="point" or self.simulator=="push":
+                new_coordination,_,_,_=self.model.planning_step(node.coordination,action)
+            else:
+                sys.exit("wrong simulator!")
         else:
-            sys.exit("wrong simulator!")
+            new_coordination,_,_,_=self.model.step(action,sim_state=node.coordination)
+        
         return new_coordination
 
-
-    def RRT(self,coordination,env):
+    def RRT(self,coordination):
         nodes=[]
         root=Node(None,coordination)
         nodes.append(root)
@@ -266,12 +260,11 @@ class Agent():
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
             
-            if "fetch" not in self.simulator:
-                action=np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),))
-                model_response=self.step(node,action)
-                # skip out of range states
-                if model_response[1]>self.model.observation_space.high[1] or model_response[1]<self.model.observation_space.low[1] or model_response[0]<self.model.observation_space.low[0] or model_response[0]>self.model.observation_space.high[0]:
-                    continue
+            action=np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),))
+            model_response=self.step(node,action)
+            # skip out of range states
+            # if model_response[1]>self.model.observation_space.high[1] or model_response[1]<self.model.observation_space.low[1] or model_response[0]<self.model.observation_space.low[0] or model_response[0]>self.model.observation_space.high[0]:
+            #   continue
 
             if self.model_access:
                 new_coordination=model_response
@@ -281,7 +274,7 @@ class Agent():
                     new_coordination=dic_obs
                     action=dic_action    
                 else:
-                    if "fetch" not in self.simulator:
+                    if "v2" not in self.simulator:
                         new_coordination=model_response
                         child=Node((node,action),new_coordination)
                         nodes.append(child)
@@ -296,11 +289,12 @@ class Agent():
 
             # check if we hit the goal
             # if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
-            if self.neighbour(env.desired_goal,env.achieved_goal):
+            if self.model.success:
                 goal=child
+                print("man")
                 break
 
-            if "fetch" not in self.simulator:
+            if "v2" not in self.simulator:
                 # update the goal to be the node with minimum visit
                 cell_x,cell_y=self.point_to_cell(new_coordination)
                 goal_cell_x,goal_cell_y=self.point_to_cell(goal.coordination)
@@ -327,25 +321,24 @@ class Agent():
             option.append(node.parent[1])
             node=node.parent[0]
 
-        return option    
-    
+        return option        
     
     # main function
-    def get_action(self, state,warmup,env,evaluation=False):
+    def get_action(self, state,warmup,evaluation=False):
         
         if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
             
             exploration=True
             
             # we will output an option by RRT or a random action
-            option= self.RRT(state,env)
+            option= self.RRT(state)
 
             # record option length for distribution in the tree
             length=len(option)
 
             # to see the impact of rrt exploration 
             #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
-        else:
+        else:            
             
             exploration =False
             length=1
