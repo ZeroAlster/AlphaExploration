@@ -1,5 +1,6 @@
 import gymnasium
 import numpy as np
+import copy
 import sys
 
 class FetchWrapper(gymnasium.Wrapper):
@@ -9,20 +10,22 @@ class FetchWrapper(gymnasium.Wrapper):
         self.achieved_goal=None
         self.desired_goal=None
         self.success=0
+        self.data=None
     
     def reset(self,seed=None):
         super().reset()
-        state,_=self.env.reset()
+        state,info=self.env.reset()
 
         self.success=0
+        self.data=copy.deepcopy(info["data"])
 
         return state
         
     def step(self, action,sim_state=None):
         
-        next_state, reward, terminated,truncated, info = self.env.step(action,sim_state=sim_state)
+        next_state, reward, terminated,truncated, info = self.env.step(action,sim_state=sim_state)        
 
-        # get success
+        self.data=copy.deepcopy(info["data"])          
         self.success=info["success"]
 
         # get done

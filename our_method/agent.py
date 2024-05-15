@@ -14,6 +14,9 @@ import sys
 import gym 
 import mujoco_maze  # noqa
 import mujoco_maze.maze_env
+from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
+                            ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
+from wrappers import FetchWrapper
 
 #hyper params
 ######################################
@@ -23,7 +26,7 @@ actor_learning_rate=1e-3
 critic_learning_rate=1e-3
 epsilon_decay=0.9999992
 epsilon=1
-RRT_budget=40
+RRT_budget=20
 max_steps= 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -37,9 +40,10 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class Node:
-    def __init__(self, parent,coordination):
+    def __init__(self, parent,coordination,data=None):
         self.parent=parent
         self.coordination=coordination
+        self.data=data
 
 class Memory:
     def __init__(self, max_size):
@@ -166,7 +170,7 @@ class Actor(nn.Module):
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,env_copy,
+    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,
                  hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, 
                  gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
         
@@ -196,7 +200,7 @@ class Agent():
             self.graph=Graph(0.2,[-14,-2],28)
         elif "v2" in self.simulator:
             self.graph=density_estimator
-            self.model=env_copy
+            self.model=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
         else:
             sys.exit("simulator is not valid.")
 
@@ -244,13 +248,18 @@ class Agent():
             else:
                 sys.exit("wrong simulator!")
         else:
-            new_coordination,_,_,_=self.model.step(action,sim_state=node.coordination)
+            new_coordination,_,_,_=self.model.step(action,sim_state=node.data)
         
         return new_coordination
 
     def RRT(self,coordination):
         nodes=[]
-        root=Node(None,coordination)
+
+        if "v2" in self.simulator:
+            root=Node(None,coordination,data=self.model.data)
+        else:
+            root=Node(None,coordination)
+        
         nodes.append(root)
         goal=root
         
@@ -284,7 +293,7 @@ class Agent():
                     break
             
             # creating the new node and adding it to the tree
-            child=Node((node,action),new_coordination)
+            child=Node((node,action),new_coordination,data=self.model.data)
             nodes.append(child)
 
             # check if we hit the goal
@@ -314,7 +323,7 @@ class Agent():
         # find a path from root to the goal or the randomly selected node
         option=[]
         # make a random move in the least visited cell (replay buffer)
-        if (not self.model_access) or len(nodes)==1 :
+        if (not self.model_access) or len(nodes)==1:
             option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
         node=goal
         while node.parent is not None:
@@ -324,13 +333,14 @@ class Agent():
         return option        
     
     # main function
-    def get_action(self, state,warmup,evaluation=False):
+    def get_action(self, state,warmup,evaluation=False,data=None):
         
         if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
             
             exploration=True
             
             # we will output an option by RRT or a random action
+            self.model.data=data
             option= self.RRT(state)
 
             # record option length for distribution in the tree

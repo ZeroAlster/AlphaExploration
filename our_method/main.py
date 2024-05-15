@@ -231,7 +231,7 @@ def train(agent,env,address,environment):
         terminal=state
 
         while not done:
-            option,e,l = agent.get_action(state,warmup=False)
+            option,e,l = agent.get_action(state,warmup=False,data=env.data)
 
             # record explorative option length
             if e:
@@ -239,7 +239,7 @@ def train(agent,env,address,environment):
 
             for action in option:
                 next_state, reward, done,_= env.step(action)
-                frames.append(env.render())
+                # frames.append(env.render())
 
                 if "v2" not in environment:
                     episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
@@ -278,9 +278,8 @@ def train(agent,env,address,environment):
                     success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
                     save_to_buffer(agent,episode_memory)
-                    imageio.mimsave("recording.mp4", frames, fps=80)
+                    # imageio.mimsave("recording.mp4", frames, fps=80)
                     print(done)
-                    sys.exit()
                 
                 # check if episode is done
                 if done:
@@ -342,10 +341,9 @@ def main(address,environment,model_avb):
         threshold=None
         action_range=np.array((1,1,1,1))
         density_estimator=Model(env=environment)
-        env_copy=copy.deepcopy(env)
     
     # initiate the agent
-    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,env_copy=env_copy)
+    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb)
     
     # train the agent
     train(agent,env,address,environment)
