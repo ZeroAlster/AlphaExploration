@@ -1,52 +1,33 @@
-fetch-push:
+press button:
 
 agent1:
 
-actor_learning_rate=1e-3
+actor_learning_rate=3e-4
 critic_learning_rate=1e-3
-num_updates=25
+num_updates=250
 
 agent2:
 
-actor_learning_rate=1e-3
+actor_learning_rate=2e-4
 critic_learning_rate=1e-3
-num_updates=30
+num_updates=250
 
 agent3:
 
-actor_learning_rate=2e-3
+actor_learning_rate=1e-3
 critic_learning_rate=1e-3
-num_updates=30
+num_updates=250
 
 agent4:
 
-actor_learning_rate=1e-3
-critic_learning_rate=2e-3
-num_updates=30
+actor_learning_rate=3e-4
+critic_learning_rate=3e-4
+num_updates=250
 
 agent5:
 
-actor_learning_rate=2e-3
-critic_learning_rate=2e-3
-num_updates=30
-
-
-agent6:
-
-
-
-agent7:
-
-
-
-agent8:
-
-
-
-agent9:
-
-
-
-agent10:
-
-
+actor_learning_rate=3e-4
+critic_learning_rate=3e-4
+num_updates=250
+RRT_budget=50
+update: one-step TD

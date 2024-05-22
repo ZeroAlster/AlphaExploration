@@ -1,10 +1,12 @@
 import pickle
 from stable_baselines3.common.callbacks import BaseCallback
 from general.maze import Env
-import math
 import gym
-import sys
 import gymnasium
+import sys
+from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
+                            ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
+import imageio
 
 #hyper params
 ######################################
@@ -40,12 +42,8 @@ class CustomCallback(BaseCallback):
             self.len_episode=500
             self.goal=[4,24.8]
             self.threshold=0.6
-        elif self.environment=="fetch-reach":
-            self.threshold= 0.05
-        elif self.environment=="fetch-slide":
-            self.threshold= 0.05
-        elif self.environment=="fetch-push":
-            self.threshold= 0.05
+        else:
+            self.threshold=None
 
     def _on_training_start(self) -> None:
         """
@@ -58,8 +56,9 @@ class CustomCallback(BaseCallback):
 
     def _on_step(self) -> bool:
 
-        if self.locals["infos"][0]["is_success"]!=0:
+        if self.locals["infos"][0]["success"]!=0:
             self.success+=1
+        
 
         if self.num_timesteps % self.checkpoint==0:
             print("next checkpoint: "+str(self.num_timesteps)+"  steps")
@@ -71,24 +70,20 @@ class CustomCallback(BaseCallback):
                 env=Env(n=self.len_episode,maze_type='square_large',method=self.method)
             elif self.environment=="push":
                 env=gym.make("PointPush-v1")
-            elif self.environment=="fetch-reach":
-                env=gymnasium.make('FetchReach-v2')
-            elif self.environment=="fetch-push":
-                env=gymnasium.make('FetchPush-v2')
-            elif self.environment=="fetch-slide":
-                env=gymnasium.make('FetchSlide-v2') 
+            else:
+                env=ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[self.environment+"-goal-observable"](render_mode="rgb_array")
 
             success=0
             for _ in range(evaluation_attempts):
                 obs,_ = env.reset()
                 done=False
                 truncated=False
-                r=-1
-                while (not done) and (not truncated) and (r!=0):
+                while (not done) and (not truncated):
                     action,_=self.model.predict(obs, deterministic=True)
-                    obs,r, done,truncated,_= env.step(action)
-                if r==0:
+                    obs,_, done,truncated,info= env.step(action)
+                if info["success"]!=0:
                     success+=1
+        
             self.success_rates.append(success/evaluation_attempts)
 
         return True
@@ -102,3 +97,19 @@ class CustomCallback(BaseCallback):
 
         with open(self.path+"/success_rates", "wb") as fp:
             pickle.dump(self.success_rates, fp)
+
+
+class RewardWrapper(gymnasium.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        
+    def step(self, action,sim_state=None):
+        
+        next_state, reward, terminated,truncated, info = self.env.step(action,sim_state=sim_state)        
+        
+        if info["success"]:
+            reward=10
+        else:
+            reward=-0.001
+        
+        return next_state, reward,terminated,truncated, info

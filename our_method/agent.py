@@ -17,16 +17,17 @@ import mujoco_maze.maze_env
 from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
 from wrappers import FetchWrapper
+import copy
 
 #hyper params
 ######################################
 replay_buffer_size = 1e6
 hidden_size=128
-actor_learning_rate=1e-3
+actor_learning_rate=3e-4
 critic_learning_rate=1e-3
 epsilon_decay=0.9999992
 epsilon=1
-RRT_budget=20
+RRT_budget=50
 max_steps= 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -57,8 +58,8 @@ class Memory:
         self.hit+=1
         
         # shuffle the buffer
-        if self.hit % self.shuffle_interval==0:
-            random.shuffle(self.buffer)    
+        # if self.hit % self.shuffle_interval==0:
+        #     random.shuffle(self.buffer)    
 
 
     def sample(self, batch_size):
@@ -252,19 +253,33 @@ class Agent():
         
         return new_coordination
 
+
+    def obs_clipping(self,coordination):
+
+        if self.simulator=="button-press-topdown-v2":
+            if (coordination[0]<-1.5 or coordination[0]>1.5):
+                return True
+            if (coordination[1]<-1.5 or coordination[1]>1.5):
+                return True
+            if (coordination[2]<-1.5 or coordination[2]>1.5):
+                return True        
+        
+        return False
+
     def RRT(self,coordination):
         nodes=[]
 
         if "v2" in self.simulator:
-            root=Node(None,coordination,data=self.model.data)
+            root=Node(None,coordination,data=copy.deepcopy(self.model.data))
         else:
             root=Node(None,coordination)
         
         nodes.append(root)
         goal=root
         
-        # create the grapgh
-        for _ in range(RRT_budget):
+        # create the graph
+        i=0
+        while i<RRT_budget:
             
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
@@ -292,15 +307,19 @@ class Agent():
                         goal=root
                     break
             
+            # observation clipping
+            # if self.obs_clipping(new_coordination):
+            #     continue
+            
+            
             # creating the new node and adding it to the tree
-            child=Node((node,action),new_coordination,data=self.model.data)
+            child=Node((node,action),new_coordination,data=copy.deepcopy(self.model.data))
             nodes.append(child)
 
             # check if we hit the goal
             # if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
             if self.model.success:
                 goal=child
-                print("man")
                 break
 
             if "v2" not in self.simulator:
@@ -310,8 +329,11 @@ class Agent():
                 if self.density_estimator.visits[cell_x][cell_y] <self.density_estimator.visits[goal_cell_x][goal_cell_y]:
                     goal=child
             else:
-                if self.graph.get_density(new_coordination)<self.graph.get_density(goal.coordination):
-                    goal=child
+                if self.graph.get_density(new_coordination)<=self.graph.get_density(goal.coordination):
+                    goal=child   
+
+            # increment the counter
+            i+=1 
         
         
         # if the goal is the root, randomly select one of the other nodes 
@@ -329,7 +351,7 @@ class Agent():
         while node.parent is not None:
             option.append(node.parent[1])
             node=node.parent[0]
-
+        
         return option        
     
     # main function

@@ -25,11 +25,11 @@ from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
 ######################################
 max_frames  = 6e6
 max_steps   = 100
-batch_size  = 256
-num_updates=30
+batch_size  = 512
+num_updates=250
 checkpoints_interval=10000
 evaluation_attempts=10
-warm_up=5000
+warm_up=500
 ######################################
 
 
@@ -181,7 +181,7 @@ def train(agent,env,address,environment):
         while not done:
             option,_,_ = agent.get_action(state,warmup=True)
             for action in option:
-                next_state, reward, done, _ = env.step(action)  
+                next_state, reward, done, _ = env.step(action)
 
                 if "v2" not in environment:
                     episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
@@ -231,15 +231,24 @@ def train(agent,env,address,environment):
         terminal=state
 
         while not done:
-            option,e,l = agent.get_action(state,warmup=False,data=env.data)
-
+            option,e,l = agent.get_action(state,warmup=False,data=env.data)            
+            
             # record explorative option length
             if e:
                 explorative_dist[l-1]+=1
 
             for action in option:
+                
+                if agent.obs_clipping(state):
+                    frames.append(env.render())
+                    print(state)
+                    print("*"*40)
+                    if len(frames)>1500:
+                        imageio.mimsave("recording.mp4", frames, fps=60)
+                        sys.exit()
+                
                 next_state, reward, done,_= env.step(action)
-                # frames.append(env.render())
+
 
                 if "v2" not in environment:
                     episode_memory.append([state, action, reward, next_state, float(agent.neighbour(next_state[0:2],next_state[-2:]))])
@@ -278,8 +287,6 @@ def train(agent,env,address,environment):
                     success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
                     save_to_buffer(agent,episode_memory)
-                    # imageio.mimsave("recording.mp4", frames, fps=80)
-                    print(done)
                 
                 # check if episode is done
                 if done:
@@ -296,7 +303,6 @@ def train(agent,env,address,environment):
         for i in range(num_updates):
             agent.update(batch_size,i)
         
-
     # record training results: terminal states,success rates, environment coverage, and visits array
     with open(address+"/locations", "wb") as fp:
             pickle.dump(destinations, fp)
@@ -350,6 +356,7 @@ def main(address,environment,model_avb):
 
 
 if __name__ == '__main__':
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-a','--address',required=True)
     parser.add_argument('-e','--environment',required=True)

@@ -34,4 +34,9 @@ class FetchWrapper(gymnasium.Wrapper):
         else:
             done=False
         
+        if self.success:
+            reward=10
+        else:
+            reward=-0.001
+        
         return next_state, reward, done, info
