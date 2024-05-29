@@ -27,7 +27,7 @@ actor_learning_rate=3e-4
 critic_learning_rate=1e-3
 epsilon_decay=0.9999992
 epsilon=1
-RRT_budget=50
+RRT_budget=40
 max_steps= 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -171,7 +171,7 @@ class Actor(nn.Module):
 
 
 class Agent():
-    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,
+    def __init__(self,num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,seed,
                  hidden_size=hidden_size, actor_learning_rate=actor_learning_rate, critic_learning_rate=critic_learning_rate, 
                  gamma=gamma, tau=tau,memory_size=int(replay_buffer_size),epsilon=epsilon,epsilon_decay=epsilon_decay):
         
@@ -201,7 +201,7 @@ class Agent():
             self.graph=Graph(0.2,[-14,-2],28)
         elif "v2" in self.simulator:
             self.graph=density_estimator
-            self.model=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
+            self.model=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array",seed=seed))
         else:
             sys.exit("simulator is not valid.")
 
@@ -257,11 +257,11 @@ class Agent():
     def obs_clipping(self,coordination):
 
         if self.simulator=="button-press-topdown-v2":
-            if (coordination[0]<-1.5 or coordination[0]>1.5):
+            if (coordination[0]<-0.5 or coordination[0]>0.5):
                 return True
-            if (coordination[1]<-1.5 or coordination[1]>1.5):
+            if (coordination[1]<0 or coordination[1]>1):
                 return True
-            if (coordination[2]<-1.5 or coordination[2]>1.5):
+            if (coordination[2]<-0.5 or coordination[2]>0.5):
                 return True        
         
         return False
@@ -278,8 +278,7 @@ class Agent():
         goal=root
         
         # create the graph
-        i=0
-        while i<RRT_budget:
+        for _ in range(RRT_budget):
             
             # sampling the node from the tree and choosing a random action
             node=random.choice(nodes)
@@ -308,9 +307,8 @@ class Agent():
                     break
             
             # observation clipping
-            # if self.obs_clipping(new_coordination):
-            #     continue
-            
+            if self.obs_clipping(new_coordination):
+                continue
             
             # creating the new node and adding it to the tree
             child=Node((node,action),new_coordination,data=copy.deepcopy(self.model.data))
@@ -331,10 +329,7 @@ class Agent():
             else:
                 if self.graph.get_density(new_coordination)<=self.graph.get_density(goal.coordination):
                     goal=child   
-
-            # increment the counter
-            i+=1 
-        
+            
         
         # if the goal is the root, randomly select one of the other nodes 
         if goal==root and len(nodes)>1:
@@ -342,16 +337,18 @@ class Agent():
             while goal==root:
                 goal=random.choice(nodes)
         
+
+        # make a random move in the least visited cell (replay buffer)
+        # if (not self.model_access) or len(nodes)==1:
+        #     option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
+        
         # find a path from root to the goal or the randomly selected node
         option=[]
-        # make a random move in the least visited cell (replay buffer)
-        if (not self.model_access) or len(nodes)==1:
-            option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
         node=goal
         while node.parent is not None:
             option.append(node.parent[1])
             node=node.parent[0]
-        
+
         return option        
     
     # main function

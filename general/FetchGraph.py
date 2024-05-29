@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 class Model:
-    def __init__(self,env,item_dim=3,dim_key=64,bucket_size=10000):
+    def __init__(self,env,item_dim=3,dim_key=12,bucket_size=5000):
         self.transitions={}
         self.densities={}
         self.env=env
@@ -39,7 +39,7 @@ class Model:
     def increment(self,state):
         hash=self.pos(state)
         if hash not in self.densities:
-            self.densities[hash]=0
+            self.densities[hash]=1
         self.densities[hash]+=1
 
     def get_density(self,state):

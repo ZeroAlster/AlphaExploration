@@ -15,9 +15,10 @@ import mujoco_maze  # noqa
 import imageio
 from general.simple_estimator import SEstimator
 from wrappers import FetchWrapper
-from general.FetchGraph import Model
+from general.MetaGraph import Model
 from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
+
 
 # current version: Main method
 
@@ -33,27 +34,17 @@ warm_up=500
 ######################################
 
 
-def evaluation(agent,environment):
-    
-    if "v2" not in environment:
-        if environment=="maze":
-            env_test=Env(n=max_steps,maze_type='square_large')
-        elif environment=="point":
-            env_test=gym.make("PointUMaze-v1")
-        elif environment=="push":
-            env_test=gym.make("PointPush-v1")
-    else:
-        env_test=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
+def evaluation(agent,env):
     
     success=0
     for _ in range(evaluation_attempts):
-        obs = env_test.reset()
+        obs = env.reset()
         done=False
-        while not done:
+        while (not done) and (not env.success):
             action,_,_ = agent.get_action(obs,warmup=False,evaluation=True)
-            obs,_,done,_= env_test.step(action[0])
+            obs,_,done,_= env.step(action[0])
         
-        if env_test.success:
+        if env.success:
             success+=1
     
     return success/evaluation_attempts
@@ -147,7 +138,7 @@ def save_to_buffer(agent,episode_memory,short=False):
         
 
 
-def train(agent,env,address,environment):
+def train(agent,env,address,environment,test_env):
     
     print('Setting environment variable to use GPU rendering:')
     os.environ["MUJOCO_GL"]="egl"
@@ -196,7 +187,7 @@ def train(agent,env,address,environment):
                         env_coverages.append(exploration(env_density))
                 else:
                     episode_memory.append([state, action, reward, next_state, float(env.success)])
-                    agent.graph.add_transition(state,action,next_state)
+                    # agent.graph.add_transition(state,action,next_state)
                     agent.graph.increment(state)
                 
                 state=next_state
@@ -222,7 +213,6 @@ def train(agent,env,address,environment):
     print("warmup has ended!")
 
     # train and save the model
-    frames = []
     while frame<max_frames:
         
         state = env.reset()
@@ -238,15 +228,7 @@ def train(agent,env,address,environment):
                 explorative_dist[l-1]+=1
 
             for action in option:
-                
-                if agent.obs_clipping(state):
-                    frames.append(env.render())
-                    print(state)
-                    print("*"*40)
-                    if len(frames)>1500:
-                        imageio.mimsave("recording.mp4", frames, fps=60)
-                        sys.exit()
-                
+            
                 next_state, reward, done,_= env.step(action)
 
 
@@ -260,7 +242,7 @@ def train(agent,env,address,environment):
                     env_density.increment(state)
                 else:
                     episode_memory.append([state, action, reward, next_state, float(env.success)])
-                    agent.graph.add_transition(state,action,next_state) 
+                    # agent.graph.add_transition(state,action,next_state) 
                     agent.graph.increment(state)                   
 
                 state=next_state
@@ -271,7 +253,7 @@ def train(agent,env,address,environment):
 
                 # recording the success rates and exploration coverage after each checkpoint when the warmup is done
                 if frame % checkpoints_interval==0:
-                    result=evaluation(agent,environment)
+                    result=evaluation(agent,test_env)
                     success_rates.append(result)
                     # env_coverages.append(exploration(env_density))
                     print("next checkpoint: "+str(frame)+"  steps")
@@ -314,11 +296,12 @@ def train(agent,env,address,environment):
             pickle.dump(explorative_dist, fp)
 
 
-def main(address,environment,model_avb):
+def main(address,environment,model_avb,seed):
     # initiate the environment, get action and state space size, and get action range
     if "v2" not in environment:
         if environment =="point":
             env=gym.make("PointUMaze-v1")
+            test_env=gym.make("PointUMaze-v1")
             num_actions=env.action_space.shape[0]
             num_states=env.observation_space.shape[0]
             action_range=np.array((1,0.25))
@@ -326,6 +309,7 @@ def main(address,environment,model_avb):
             threshold=0.6
         elif environment=="maze":
             env=Env(n=max_steps,maze_type='square_large')
+            test_env=Env(n=max_steps,maze_type='square_large')
             num_actions = env.action_size
             num_states  = env.state_size*2
             action_range=np.array((env.action_range,env.action_range))
@@ -333,6 +317,7 @@ def main(address,environment,model_avb):
             threshold=0.15
         elif environment=="push":
             env=gym.make("PointPush-v1")
+            test_env=gym.make("PointPush-v1")
             num_actions=env.action_space.shape[0]
             num_states=env.observation_space.shape[0]
             action_range=np.array((1,0.25))
@@ -341,18 +326,19 @@ def main(address,environment,model_avb):
         else:
             raise ValueError("The environment does not exist")
     else:
-        env=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
+        env=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array",seed=seed))
+        test_env=FetchWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array",seed=seed))
         num_actions=env.action_space.shape[0]
         num_states=env.observation_space.shape[0]
         threshold=None
         action_range=np.array((1,1,1,1))
-        density_estimator=Model(env=environment)
-    
+        density_estimator=Model((-0.5,0.5),(0,1),(-0.5,0.5),0.02)
+
     # initiate the agent
-    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb)
+    agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,seed)
     
     # train the agent
-    train(agent,env,address,environment)
+    train(agent,env,address,environment,test_env)
 
 
 if __name__ == '__main__':
@@ -378,4 +364,4 @@ if __name__ == '__main__':
         print("path is valid with seed: "+str(seed))
     
     # train the agent
-    main(args.address,args.environment,args.model=="True")
+    main(args.address,args.environment,args.model=="True",seed)

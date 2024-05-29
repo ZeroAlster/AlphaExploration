@@ -1,0 +1,101 @@
+# agent successful settings in press button:
+######################################
+max_frames  = 6e6
+max_steps   = 100
+batch_size  = 512
+num_updates=250
+checkpoints_interval=10000
+evaluation_attempts=10
+warm_up=500
+
+replay_buffer_size = 1e6
+hidden_size=128
+actor_learning_rate=3e-4
+critic_learning_rate=1e-3
+epsilon_decay=0.9999992
+epsilon=1
+RRT_budget=40
+max_steps= 100
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.99
+minimum_exploration=0.01
+######################################
+
+
+
+# agent successful settings in wall-maze:
+######################################
+max_frames  = 6e6
+max_steps   = 100
+batch_size  = 128
+num_updates=10
+num_agents=15
+checkpoints_interval=10000
+evaluation_attempts=10
+warm_up=20000
+
+replay_buffer_size = 5e5
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=1e-3
+epsilon_decay=0.9999988
+epsilon=1
+RRT_budget=40
+max_steps   = 100
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.99
+minimum_exploration=0.01
+######################################
+
+# agent successful settings in u-maze:
+######################################
+max_frames  = 6e6
+max_steps   = 100
+batch_size  = 128
+num_updates=10
+num_agents=15
+checkpoints_interval=10000
+evaluation_attempts=10
+warm_up=20000
+
+replay_buffer_size = 5e5
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=1e-3
+epsilon_decay=0.9999988
+epsilon=1
+RRT_budget=40
+max_steps   = 100
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=1
+minimum_exploration=0.01
+######################################
+
+
+# agent successful settings in point-push:
+######################################
+max_frames  = 6e6
+max_steps   = 100
+batch_size  = 128
+num_updates=20
+num_agents=20
+checkpoints_interval=10000
+evaluation_attempts=10
+warm_up=20000
+
+replay_buffer_size = 1e6
+hidden_size=128
+actor_learning_rate=1e-4
+critic_learning_rate=1e-3
+epsilon_decay=0.9999992
+epsilon=1
+RRT_budget=40
+max_steps   = 100
+short_memory_size=int(5e4)
+tau=1e-2
+gamma=0.99
+minimum_exploration=0.01
+######################################
