@@ -18,16 +18,17 @@ from wrappers import FetchWrapper
 from general.MetaGraph import Model
 from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
+import matplotlib.pyplot as plt
 
 
 # current version: Main method
 
 #hyper params
 ######################################
-max_frames  = 6e6
+max_frames  = 2e6
 max_steps   = 100
 batch_size  = 512
-num_updates=250
+num_updates=400
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=500
@@ -166,10 +167,12 @@ def train(agent,env,address,environment,test_env):
         
         episode_memory=[]
         state= env.reset()
+        print(state)
+        sys,exit()
         done=False
         terminal=state
         
-        while not done:
+        while (not done) and (not env.success):
             option,_,_ = agent.get_action(state,warmup=True)
             for action in option:
                 next_state, reward, done, _ = env.step(action)
@@ -201,6 +204,7 @@ def train(agent,env,address,environment,test_env):
                     success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
                     save_to_buffer(agent,episode_memory)
+                    break
     
                 if done:
                     save_to_buffer(agent,episode_memory)
@@ -220,7 +224,7 @@ def train(agent,env,address,environment,test_env):
         episode_memory=[]
         terminal=state
 
-        while not done:
+        while (not done) and (not env.success):
             option,e,l = agent.get_action(state,warmup=False,data=env.data)            
             
             # record explorative option length
@@ -269,6 +273,7 @@ def train(agent,env,address,environment,test_env):
                     success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
                     save_to_buffer(agent,episode_memory)
+                    break
                 
                 # check if episode is done
                 if done:
@@ -333,6 +338,9 @@ def main(address,environment,model_avb,seed):
         threshold=None
         action_range=np.array((1,1,1,1))
         density_estimator=Model((-0.5,0.5),(0,1),(-0.5,0.5),0.02)
+
+        print(density_estimator.grid.shape)
+        sys.exit()
 
     # initiate the agent
     agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,seed)

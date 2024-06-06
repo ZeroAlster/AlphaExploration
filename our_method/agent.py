@@ -23,17 +23,25 @@ import copy
 ######################################
 replay_buffer_size = 1e6
 hidden_size=128
-actor_learning_rate=3e-4
+actor_learning_rate=4e-4
 critic_learning_rate=1e-3
-epsilon_decay=0.9999992
+epsilon_decay=0.999998
 epsilon=1
-RRT_budget=40
+RRT_budget=50
 max_steps= 100
 short_memory_size=int(5e4)
 tau=1e-2
 gamma=0.99
 minimum_exploration=0.01
 ######################################
+
+
+
+obs_range={
+    "button-press-topdown-v2":[(-0.3,0.3),(0.3,1),(0,0.5)],
+    "soccer-v2":[(-0.3,0.3),(0.3,1),(0,0.5)],
+    "push-v2":[]
+}
 
 
 # cpu or gpu
@@ -256,13 +264,14 @@ class Agent():
 
     def obs_clipping(self,coordination):
 
-        if self.simulator=="button-press-topdown-v2":
-            if (coordination[0]<-0.5 or coordination[0]>0.5):
-                return True
-            if (coordination[1]<0 or coordination[1]>1):
-                return True
-            if (coordination[2]<-0.5 or coordination[2]>0.5):
-                return True        
+        bounds=obs_range[self.simulator]
+
+        if (coordination[0]<bounds[0][0] or coordination[0]>bounds[0][1]):
+            return True
+        if (coordination[1]<bounds[1][0] or coordination[1]>bounds[1][1]):
+            return True
+        if (coordination[2]<bounds[2][0] or coordination[2]>bounds[2][1]):
+            return True        
         
         return False
 
@@ -335,8 +344,7 @@ class Agent():
         if goal==root and len(nodes)>1:
             goal=random.choice(nodes)
             while goal==root:
-                goal=random.choice(nodes)
-        
+                goal=random.choice(nodes)        
 
         # make a random move in the least visited cell (replay buffer)
         # if (not self.model_access) or len(nodes)==1:
@@ -348,6 +356,9 @@ class Agent():
         while node.parent is not None:
             option.append(node.parent[1])
             node=node.parent[0]
+
+        if goal==root and len(nodes)==1:
+            option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
 
         return option        
     

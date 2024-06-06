@@ -18,7 +18,7 @@ import os
 #hyper params
 ######################################
 replay_buffer_size = 1e6
-max_frames  = 6e6
+max_frames  = 2e6
 learning_rate=3e-4
 max_steps=100
 batch_size  = 512

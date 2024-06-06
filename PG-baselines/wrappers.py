@@ -55,7 +55,7 @@ class CustomCallback(BaseCallback):
         pass
 
     def _on_step(self) -> bool:
-
+        
         if self.locals["infos"][0]["success"]!=0:
             self.success+=1
         

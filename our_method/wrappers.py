@@ -1,7 +1,5 @@
 import gymnasium
-import numpy as np
 import copy
-import sys
 
 class FetchWrapper(gymnasium.Wrapper):
     def __init__(self, env):

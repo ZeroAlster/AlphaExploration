@@ -19,8 +19,8 @@ def plot_success(num_agents,num_methods,environment):
 
     address1="DDPG/results/"+environment
     address2="our_method/results/"+environment
-    address3="PG+HER/SAC/"+environment
-    address4="PG+HER/TD3/"+environment
+    address3="PG-baselines/SAC/"+environment
+    address4="PG-baselines/TD3/"+environment
 
     addresses=[]
     addresses.append(address1)
@@ -41,7 +41,7 @@ def plot_success(num_agents,num_methods,environment):
 
 
     for k in range(num_methods):
-        number=len(all_success[k][0])
+        number=len(all_success[0][2])
 
         std=[]
         mean=[]
