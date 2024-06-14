@@ -21,13 +21,14 @@ class CustomCallback(BaseCallback):
 
     :param verbose: (int) Verbosity level 0: not output 1: info 2: debug
     """
-    def __init__(self,address,environment,method,verbose=0,checkpoint=checkpoint):
+    def __init__(self,address,environment,method,test_env,verbose=0,checkpoint=checkpoint):
         super(CustomCallback, self).__init__(verbose)
         self.checkpoint=checkpoint
         self.locations=[]
         self.success_rates=[]
         self.path=address
         self.environment=environment
+        self.test_env=test_env
         self.success=0
         self.method=method
         if self.environment=="point":
@@ -59,32 +60,24 @@ class CustomCallback(BaseCallback):
         if self.locals["infos"][0]["success"]!=0:
             self.success+=1
         
-
         if self.num_timesteps % self.checkpoint==0:
             print("next checkpoint: "+str(self.num_timesteps)+"  steps")
             print("goal is achieved: "+str(self.success))
             
-            if self.environment=="point":
-                env = gym.make("PointUMaze-v1")
-            elif self.environment=="maze":
-                env=Env(n=self.len_episode,maze_type='square_large',method=self.method)
-            elif self.environment=="push":
-                env=gym.make("PointPush-v1")
-            else:
-                env=ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[self.environment+"-goal-observable"](render_mode="rgb_array")
-
-            success=0
+            num_success=0
             for _ in range(evaluation_attempts):
-                obs,_ = env.reset()
+                obs,_ = self.test_env.reset()
                 done=False
                 truncated=False
-                while (not done) and (not truncated):
+                success=0
+                while (not done) and (not truncated) and (success==0):
                     action,_=self.model.predict(obs, deterministic=True)
-                    obs,_, done,truncated,info= env.step(action)
-                if info["success"]!=0:
-                    success+=1
+                    obs,_, done,truncated,info= self.test_env.step(action)
+                    success=info["success"]
+                if success!=0:
+                    num_success+=1
         
-            self.success_rates.append(success/evaluation_attempts)
+            self.success_rates.append(num_success/evaluation_attempts)
 
         return True
 

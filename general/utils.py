@@ -48,7 +48,7 @@ def plot_success(num_agents,num_methods,environment):
         horizon=[]
 
         i=0
-        beta=10
+        beta=2
         while i < number:
             values=[]
             for j in range(num_agents):

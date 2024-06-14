@@ -26,10 +26,10 @@ warmup=20000
 ######################################
 
 
-def train(agent,address,environment,method):
+def train(agent,address,environment,method,test_env):
     
     # train and save the model
-    agent.learn(max_frames,callback=CustomCallback(address=address,environment=environment,method=method))
+    agent.learn(max_frames,callback=CustomCallback(test_env=test_env,address=address,environment=environment,method=method))
     agent.save(address+"/model")
 
 
@@ -38,22 +38,26 @@ def main(address,environment,method,seed):
     if "v2" not in environment:
         if environment=="maze":
             env=Env(n=max_steps,maze_type='square_large',method=method)
+            test_env=Env(n=max_steps,maze_type='square_large',method=method)
             sigma=0.15 * np.ones(2)
             action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
         elif environment=="point":
             env=gym.make("PointUMaze-v1")
+            test_env=gym.make("PointUMaze-v1")
             sigma=np.ones(2)* 0.4
             sigma[1]=sigma[1]/8
             action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
         elif environment=="push":
             env=gym.make("PointPush-v1")
+            test_env=gym.make("PointPush-v1")
             sigma=np.ones(2)* 0.4
             sigma[1]=sigma[1]/8
             action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
         else:
             raise ValueError("The environment does not exist.")
     else:
-        env=RewardWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array"))
+        env=RewardWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array",seed=seed))
+        test_env=RewardWrapper(ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[environment+"-goal-observable"](render_mode="rgb_array",seed=seed))
         sigma=0.15 * np.ones((1,4))
         action_noise = NormalActionNoise(mean=np.zeros((1,4)), sigma=sigma)
     
@@ -76,7 +80,7 @@ def main(address,environment,method,seed):
         raise ValueError("method is not valid")
 
     # train the agent
-    train(agent,address,environment,method)
+    train(agent,address,environment,method,test_env)
 
 
 if __name__ == '__main__':
