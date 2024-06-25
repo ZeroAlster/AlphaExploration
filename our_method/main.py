@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 max_frames  = 2e6
 max_steps   = 100
 batch_size  = 512
-num_updates=400
+num_updates=250
 checkpoints_interval=10000
 evaluation_attempts=10
 warm_up=500
@@ -167,8 +167,6 @@ def train(agent,env,address,environment,test_env):
         
         episode_memory=[]
         state= env.reset()
-        print(state)
-        sys,exit()
         done=False
         terminal=state
         
@@ -339,9 +337,6 @@ def main(address,environment,model_avb,seed):
         action_range=np.array((1,1,1,1))
         density_estimator=Model((-0.5,0.5),(0,1),(-0.5,0.5),0.02)
 
-        print(density_estimator.grid.shape)
-        sys.exit()
-
     # initiate the agent
     agent=Agent(num_actions,num_states,action_range,density_estimator,environment,threshold,model_avb,seed)
     
@@ -351,25 +346,36 @@ def main(address,environment,model_avb,seed):
 
 if __name__ == '__main__':
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-a','--address',required=True)
-    parser.add_argument('-e','--environment',required=True)
-    parser.add_argument('-m','--model',required=True)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-a','--address',required=True)
+    # parser.add_argument('-e','--environment',required=True)
+    # parser.add_argument('-m','--model',required=True)
+    # args = parser.parse_args()
 
-    # set random seeds
-    seed=random.randint(0,1000)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    random.seed(seed)
-    np.random.seed(seed)
+    # # set random seeds
+    # seed=random.randint(0,1000)
+    # torch.manual_seed(seed)
+    # torch.cuda.manual_seed_all(seed)
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+    # random.seed(seed)
+    # np.random.seed(seed)
     
-    if  not os.path.exists(args.address):
-        sys.exit("The path is wrong!")
-    else:
-        print("path is valid with seed: "+str(seed))
     
-    # train the agent
-    main(args.address,args.environment,args.model=="True",seed)
+    # # save the seed to reproduce the results
+    # with open(args.address+'/seed.txt', 'w') as f:
+    #     f.write('%d' % seed)
+    
+    # if  not os.path.exists(args.address):
+    #     sys.exit("The path is wrong!")
+    # else:
+    #     print("path is valid with seed: "+str(seed))
+    
+    # # train the agent
+    # main(args.address,args.environment,args.model=="True",seed)
+
+    with open("our_method/results/window-open/agent1/success_rates", 'rb') as fp:
+        success=pickle.load(fp)
+    
+    plt.plot(success)
+    plt.savefig("test")

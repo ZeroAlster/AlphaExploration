@@ -27,7 +27,7 @@ actor_learning_rate=4e-4
 critic_learning_rate=1e-3
 epsilon_decay=0.999998
 epsilon=1
-RRT_budget=50
+RRT_budget=60
 max_steps= 100
 short_memory_size=int(5e4)
 tau=1e-2
@@ -38,9 +38,9 @@ minimum_exploration=0.01
 
 
 obs_range={
-    "button-press-topdown-v2":[(-0.3,0.3),(0.3,1),(0,0.5)],
+    "button-press-topdown-v2":[(-0.4,0.4),(0.2,1),(-0.2,0.5)],
     "soccer-v2":[(-0.3,0.3),(0.3,1),(0,0.5)],
-    "push-v2":[]
+    "window-open-v2":[(-0.1,0.5),(0.3,1),(-0.1,0.5)]
 }
 
 
@@ -345,10 +345,6 @@ class Agent():
             goal=random.choice(nodes)
             while goal==root:
                 goal=random.choice(nodes)        
-
-        # make a random move in the least visited cell (replay buffer)
-        # if (not self.model_access) or len(nodes)==1:
-        #     option.append(np.random.uniform(-self.action_range,self.action_range,size=(len(self.action_range),)))
         
         # find a path from root to the goal or the randomly selected node
         option=[]
