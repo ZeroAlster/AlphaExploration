@@ -20,7 +20,6 @@ from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
 import matplotlib.pyplot as plt
 
-
 # current version: Main method
 
 #hyper params
@@ -374,7 +373,7 @@ if __name__ == '__main__':
     # # train the agent
     # main(args.address,args.environment,args.model=="True",seed)
 
-    with open("our_method/results/window-open/agent1/success_rates", 'rb') as fp:
+    with open("our_method/results/press-button/agent14/success_rates", 'rb') as fp:
         success=pickle.load(fp)
     
     plt.plot(success)

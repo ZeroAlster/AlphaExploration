@@ -72,7 +72,7 @@ def plot_success(num_agents,num_methods,environment):
         plt.plot(X_, Y_,color=colors[k])
 
         # fix the error bar
-        std=std*0.6
+        std=std*0.4
         down_bar=np.maximum((mean-std),0)
         up_bar=np.minimum((mean+std),1)
 
