@@ -43,6 +43,8 @@ obs_range={
     "window-open-v2":[(-0.1,0.5),(0.3,1),(-0.1,0.5)]
 }
 
+noise_scale=[0.15,0.15,0.15,0.15]
+
 
 # cpu or gpu
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -191,7 +193,7 @@ class Agent():
         self.epsilon=epsilon
         self.epsilon_decay=epsilon_decay
         self.action_range=action_range
-        self.short_memory_updates=1
+        self.short_memory_updates=0
         self.simulator=environment
         self.threshold=threshold
         self.model_access=model_avb
@@ -359,59 +361,61 @@ class Agent():
         return option        
     
     # main function
-    def get_action(self, state,warmup,evaluation=False,data=None):
+    # def get_action(self, state,warmup,evaluation=False,data=None):
         
-        if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
+    #     if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
             
-            exploration=True
+    #         exploration=True
             
-            # we will output an option by RRT or a random action
-            self.model.data=data
-            option= self.RRT(state)
+    #         # we will output an option by RRT or a random action
+    #         self.model.data=data
+    #         option= self.RRT(state)
 
-            # record option length for distribution in the tree
-            length=len(option)
+    #         # record option length for distribution in the tree
+    #         length=len(option)
 
-            # to see the impact of rrt exploration 
-            #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
-        else:            
+    #         # to see the impact of rrt exploration 
+    #         #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
+    #     else:            
             
-            exploration =False
-            length=1
+    #         exploration =False
+    #         length=1
 
-            #get a primitive action from the network
-            state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-            action = self.actor.forward(state)
-            action = action.cpu().detach().numpy().flatten()
-            option=[action]
+    #         #get a primitive action from the network
+    #         state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+    #         action = self.actor.forward(state)
+    #         action = action.cpu().detach().numpy().flatten()
+    #         option=[action]
         
-        # reverse the option
-        option.reverse()
+    #     # reverse the option
+    #     option.reverse()
 
-        # update the epsilon
-        if self.epsilon> minimum_exploration:
-            self.epsilon=self.epsilon*self.epsilon_decay
+    #     # update the epsilon
+    #     if self.epsilon> minimum_exploration:
+    #         self.epsilon=self.epsilon*self.epsilon_decay
 
-        return option,exploration,length
+    #     return option,exploration,length
 
     # noisy action
-    # def get_action(self, state,warmup,evaluation=False):
+    def get_action(self, state,warmup,evaluation=False,data=None):
         
-    #     #get a primitive action from the network
-    #     state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-    #     action = self.actor.forward(state)
-    #     action = action.cpu().detach().numpy().flatten()
+        #get a primitive action from the network
+        state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+        action = self.actor.forward(state)
+        action = action.cpu().detach().numpy().flatten()
         
-    #     # adding noise to the action if it is not evaluation
-    #     if not evaluation:
-    #         noise=np.ones(2)
-    #         noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
-    #         noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
-    #         action=np.clip(action+noise,-self.action_range, self.action_range)
+        # adding noise to the action if it is not evaluation
+        if not evaluation:
+            noise=np.ones(4)
+            noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
+            noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
+            noise[2]=np.random.normal(0, noise_scale[2], size=1).clip(-self.action_range[1], self.action_range[1])
+            noise[3]=np.random.normal(0, noise_scale[3], size=1).clip(-self.action_range[1], self.action_range[1])
+            action=np.clip(action+noise,-self.action_range, self.action_range)
 
-    #     option=[action]
+        option=[action]
 
-    #     return option,False,1
+        return option,False,1
     
     
     def update(self, batch_size,update_number):

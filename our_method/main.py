@@ -19,6 +19,7 @@ from general.MetaGraph import Model
 from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # current version: Main method
 
@@ -96,7 +97,6 @@ def save_to_buffer(agent,episode_memory,short=False):
             agent.memory.push(entry[0],entry[1],G,episode_next_state,entry[4],i+1)
             i+=1
 
-
 # This is used for one-step TD update
 # def save_to_buffer(agent,episode_memory,short=False):
 #     for entry in (episode_memory):
@@ -137,11 +137,10 @@ def save_to_buffer(agent,episode_memory,short=False):
 #             agent.short_memory.push(episode_memory[i][0],episode_memory[i][1],rewards,states,dones,steps)
         
 
-
 def train(agent,env,address,environment,test_env):
     
-    print('Setting environment variable to use GPU rendering:')
-    os.environ["MUJOCO_GL"]="egl"
+    # print('Setting environment variable to use GPU rendering:')
+    # os.environ["MUJOCO_GL"]="egl"
     
     #define variables for plotting
     success_rates=[]
@@ -281,7 +280,7 @@ def train(agent,env,address,environment,test_env):
         destinations.append([terminal,frame])
 
         # set number of updates from short memory (off for one-buffer settings)
-        agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        # agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
         # update after each episode when the warmup is done
         for i in range(num_updates):
@@ -345,36 +344,30 @@ def main(address,environment,model_avb,seed):
 
 if __name__ == '__main__':
     
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-a','--address',required=True)
-    # parser.add_argument('-e','--environment',required=True)
-    # parser.add_argument('-m','--model',required=True)
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a','--address',required=True)
+    parser.add_argument('-e','--environment',required=True)
+    parser.add_argument('-m','--model',required=True)
+    args = parser.parse_args()
 
-    # # set random seeds
-    # seed=random.randint(0,1000)
-    # torch.manual_seed(seed)
-    # torch.cuda.manual_seed_all(seed)
-    # torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
-    # random.seed(seed)
-    # np.random.seed(seed)
+    # set random seeds
+    seed=random.randint(0,1000)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
     
     
-    # # save the seed to reproduce the results
-    # with open(args.address+'/seed.txt', 'w') as f:
-    #     f.write('%d' % seed)
+    # save the seed to reproduce the results
+    with open(args.address+'/seed.txt', 'w') as f:
+        f.write('%d' % seed)
     
-    # if  not os.path.exists(args.address):
-    #     sys.exit("The path is wrong!")
-    # else:
-    #     print("path is valid with seed: "+str(seed))
+    if  not os.path.exists(args.address):
+        sys.exit("The path is wrong!")
+    else:
+        print("path is valid with seed: "+str(seed))
     
-    # # train the agent
-    # main(args.address,args.environment,args.model=="True",seed)
-
-    with open("our_method/results/press-button/agent14/success_rates", 'rb') as fp:
-        success=pickle.load(fp)
-    
-    plt.plot(success)
-    plt.savefig("test")
+    # train the agent
+    main(args.address,args.environment,args.model=="True",seed)
