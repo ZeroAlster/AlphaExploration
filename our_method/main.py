@@ -308,6 +308,17 @@ def main(address,environment,model_avb,seed):
             action_range=np.array((1,0.25))
             density_estimator=SEstimator(1,20,20,[-2,-2])
             threshold=0.6
+
+            os.environ["MUJOCO_GL"]="egl"
+            env.reset()
+            env.reset()
+            img = env.render(mode='rgb_array')
+            plt.imshow(img)
+            plt.axis('off')
+            plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
+            exit()
+
+
         elif environment=="maze":
             env=Env(n=max_steps,maze_type='square_large')
             test_env=Env(n=max_steps,maze_type='square_large')
@@ -316,6 +327,19 @@ def main(address,environment,model_avb,seed):
             action_range=np.array((env.action_range,env.action_range))
             density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
             threshold=0.15
+            # import matplotlib.patches as patches
+            # # plot the map first
+            # _, ax = plt.subplots(1, 1, figsize=(5, 4))
+            # for x, y in env.maze._walls:
+            #     ax.plot(x, y, 'k-')
+            
+            # square1 = patches.Rectangle((-0.5,-0.5), 1, 1, edgecolor='b', facecolor='blue')
+            # square2 = patches.Rectangle((8.5, 8.5), 1, 1, edgecolor='g', facecolor='green')
+            # # Add the squares to the axis
+            # ax.add_patch(square1)
+            # ax.add_patch(square2)
+
+            # plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
         elif environment=="push":
             env=gym.make("PointPush-v1")
             test_env=gym.make("PointPush-v1")
@@ -324,6 +348,16 @@ def main(address,environment,model_avb,seed):
             action_range=np.array((1,0.25))
             density_estimator=SEstimator(1,28,28,[-14,-2])
             threshold=0.6
+
+            os.environ["MUJOCO_GL"]="egl"
+            env.reset()
+            env.reset()
+            img = env.render(mode='rgb_array')
+            plt.imshow(img)
+            plt.axis('off')
+            plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
+            exit()
+
         else:
             raise ValueError("The environment does not exist")
     else:

@@ -33,7 +33,7 @@ def plot_individual(num_agents,num_methods,environment):
         if j==3:
             num_agents=5
         elif j==1:
-             num_agents=3
+             num_agents=4
         else:
              num_agents=3
         for i in range(num_agents):
@@ -46,7 +46,7 @@ def plot_individual(num_agents,num_methods,environment):
     colors=["blue","red","green","purple","aqua"]
 
     for k in range(num_methods):
-        number=len(all_success[1][1])
+        number=len(all_success[1][0])
         
         std=[]
         mean=[]
@@ -60,7 +60,7 @@ def plot_individual(num_agents,num_methods,environment):
             if k==3:
                 num_agents=5
             elif k==1:
-                num_agents=3
+                num_agents=4
             else:
                 num_agents=3
 
@@ -105,7 +105,7 @@ def plot_individual(num_agents,num_methods,environment):
 
     plt.title("success rate")
     plt.xlabel("checkpoints")
-    plt.savefig(environment)
+    plt.savefig("test.pdf", format="pdf",bbox_inches='tight')
 
 
 # plot success rate for the paper
@@ -170,13 +170,15 @@ def plot_success(num_agents,num_methods,environment):
         #smoothing the plots
         window_size = 15
 
-        # first_part=mean[0:window_size]
-        # first_part=pd.Series(first_part).rolling(window=5).mean()
-        # first_part[4]=0
-        # first_part[3]=0
+        first_part=mean[0:window_size]
+        first_part=pd.Series(first_part).rolling(window=4).mean()
+        first_part[4]=0
+        first_part[3]=0
+        first_part[2]=0
+        first_part[1]=0
         
         mean = pd.Series(mean).rolling(window=window_size).mean()
-        # mean[0:window_size]=first_part
+        mean[0:window_size]=first_part
         plt.plot(horizon, mean,color=colors[k])
 
         # fix the error bar
@@ -193,8 +195,7 @@ def plot_success(num_agents,num_methods,environment):
 
     plt.title("success rate")
     plt.xlabel("checkpoints")
-    # plt.savefig("general/final_figures/"+environment+"/success rates")
-    plt.savefig("test")
+    plt.savefig('test.pdf',format="pdf",bbox_inches='tight',dpi=300)
 
 # plot environment coverage for the paper
 #####################################
@@ -204,11 +205,11 @@ def plot_coverage(num_agents,num_methods):
     explorations3=[]
     explorations4=[]
     explorations5=[]
-    address1="DDPG_ICM/results/push"
-    address2="DDPG_temporal/results/push/full"
-    address3="DDPG/results/push"
-    address4="our_method/results/push/full (perfect model)"
-    address5="DOIE/push/exploration/"
+    address1="DDPG_ICM/results/mujoco"
+    address2="DDPG_temporal/results/mujoco/full"
+    address3="DDPG/results/mujoco"
+    address4="our_method/results/mujoco/full (perfect model)"
+    address5="DOIE/mujoco/exploration/"
 
     for i in range(num_agents):
         with open(address1+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
@@ -246,11 +247,11 @@ def plot_coverage(num_agents,num_methods):
             values=[]
             for j in range(num_agents):
                 # for mujoco
-                # values.append(explorations[k][j][i]*(25/17))
+                values.append(explorations[k][j][i]*(25/17))
                 # for maze
                 # values.append(explorations[k][j][i])
                 # for push
-                values.append(explorations[k][j][i]*(1.09))
+                # values.append(explorations[k][j][i]*(1.09))
             mean[0][i]=sum(values)/len(values)
             std[0][i]=statistics.pstdev(values)
             horizon[0][i]=i
@@ -268,22 +269,25 @@ def plot_coverage(num_agents,num_methods):
     plt.yticks([0,0.2,0.4,0.6,0.8,1])
     plt.gca().set_ylim(top=1.05)
     # ax.legend(loc="lower right")
-    plt.savefig("test")
+    plt.savefig('test.pdf',format="pdf",bbox_inches='tight')
 
 
 # plot a legend for each plot
 ######################################
 def plot_legend():
      
-    colors=["blue","red","green","purple","aqua"]
+    colors=["blue","red","green","aqua","purple"]
     fig = pylab.figure()
     figlegend = pylab.figure(figsize=(13,0.5))
     ax = fig.add_subplot(111)
     lines = ax.plot(range(10), colors[0], range(10), colors[1], range(10), colors[2], range(10), colors[3], range(10), colors[4])
-    figlegend.legend(lines, ("DDPG + \u03B5t-greedy","DDPG + GDRB","DDPG + longest n-step return","DDPG"),loc='center',ncol=4)
+    # figlegend.legend(lines, ("DDPG + \u03B5t-greedy","DDPG + GDRB","DDPG + longest n-step return","DDPG"),loc='center',ncol=4)
+    figlegend.legend(lines, ("DDPG + \u03B5z-greedy","DDPG","DDPG + \u03B5t-greedy","DDPG + intrinsic motivation","DOIE"),loc='center',ncol=5)
+    # figlegend.legend(lines, ("ETGL-DDPG","DOIE","SAC","TD3","DDPG"),loc='center',ncol=5)
+    # figlegend.legend(lines, ("perfect model","replay buffer"),loc='center',ncol=2)
     fig.show()
     figlegend.show()
-    figlegend.savefig('legend.png',bbox_inches='tight')
+    figlegend.savefig('legend.pdf',format="pdf",bbox_inches='tight')
 
 # plot the comparison between model and buffer
 def plot_model_buffer():
@@ -291,8 +295,8 @@ def plot_model_buffer():
     for _ in range(2):
          all_success.append([])
 
-    address1="our_method/results/push/update/avg8-step-TD/"
-    address2="our_method/results/push/full (perfect model)/"
+    address1="our_method/results/maze/update/avg8-step-TD/"
+    address2="our_method/results/maze/full (perfect model)/"
 
     addresses=[]
     addresses.append(address1)
@@ -349,7 +353,7 @@ def plot_model_buffer():
         first_part[3]=0
         
         mean = pd.Series(mean).rolling(window=window_size).mean()
-        if k==0:
+        if k==0 or k==1:
             mean[0:window_size]=first_part
         plt.plot(horizon, mean,color=colors[k])
 
@@ -367,8 +371,7 @@ def plot_model_buffer():
 
     plt.title("success rate")
     plt.xlabel("checkpoints")
-    plt.savefig("test")
-    # plt.savefig("general/final_figures/"+"/success rates")
+    plt.savefig('test.pdf', format='pdf', bbox_inches='tight', dpi=300)
 
 
 # print number of successes for each agent
@@ -411,7 +414,7 @@ if __name__ == '__main__':
     
     # num_success(int(args.agents),args.address,args.environment)
     # plot_coverage(int(args.agents),int(args.curves))
-    # plot_legend()
+    plot_legend()
     # plot_success(int(args.agents),int(args.curves),args.environment)
     # plot_model_buffer()
-    plot_individual(int(args.agents),int(args.curves),args.environment)
+    # plot_individual(int(args.agents),int(args.curves),args.environment)
