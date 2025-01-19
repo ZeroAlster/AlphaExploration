@@ -7,10 +7,11 @@ import numpy as np
 import mujoco_maze  # noqa
 from mujoco_maze.maze_env import MazeEnv
 sys.path.append("/home/futuhi/AlphaExploration")
-from wrappers import CustomCallback,RewardWrapper
+from wrappers import CustomCallback,RewardWrapper,HERWrapper,MujocoWrapper
 from general.maze import Env
 from stable_baselines3 import SAC,TD3,DDPG
 from stable_baselines3.common.noise import NormalActionNoise
+from stable_baselines3.her import HerReplayBuffer
 from metaworld.envs import (ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE,
                             ALL_V2_ENVIRONMENTS_GOAL_HIDDEN)
 import os
@@ -39,17 +40,20 @@ def main(address,environment,method,seed):
         if environment=="maze":
             env=Env(n=max_steps,maze_type='square_large',method=method)
             test_env=Env(n=max_steps,maze_type='square_large',method=method)
+            her_env=HERWrapper(env)
             sigma=0.15 * np.ones(2)
             action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
         elif environment=="point":
             env=gym.make("PointUMaze-v1")
             test_env=gym.make("PointUMaze-v1")
+            her_env=MujocoWrapper(env)
             sigma=np.ones(2)* 0.4
             sigma[1]=sigma[1]/8
             action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
         elif environment=="push":
             env=gym.make("PointPush-v1")
             test_env=gym.make("PointPush-v1")
+            her_env=MujocoWrapper(env)
             sigma=np.ones(2)* 0.4
             sigma[1]=sigma[1]/8
             action_noise = NormalActionNoise(mean=np.zeros(2), sigma=sigma)
@@ -76,6 +80,10 @@ def main(address,environment,method,seed):
     elif method=="DDPG":
         agent = DDPG("MlpPolicy", env=env, verbose=0,buffer_size=int(replay_buffer_size),batch_size=batch_size,policy_kwargs=policy_kwargs,
                 learning_rate=learning_rate,seed=seed,device="cuda",train_freq=(2,"step"),action_noise=action_noise)
+    elif method=="HER":
+        agent = SAC("MultiInputPolicy", env=her_env, verbose=0,batch_size=batch_size,replay_buffer_class=HerReplayBuffer,replay_buffer_kwargs=dict(
+                    n_sampled_goal=4,goal_selection_strategy="future"),policy_kwargs=policy_kwargs,learning_rate=learning_rate,
+                    seed=seed,device="cuda",train_freq=(2,"step"),action_noise=action_noise)
     else:
         raise ValueError("method is not valid")
 

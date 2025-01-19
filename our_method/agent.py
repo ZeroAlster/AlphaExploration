@@ -23,9 +23,9 @@ import copy
 ######################################
 replay_buffer_size = 1e6
 hidden_size=128
-actor_learning_rate=4e-4
+actor_learning_rate=1e-4
 critic_learning_rate=1e-3
-epsilon_decay=0.999998
+epsilon_decay=0.9999988
 epsilon=1
 RRT_budget=60
 max_steps= 100
@@ -318,16 +318,16 @@ class Agent():
                     break
             
             # observation clipping
-            if self.obs_clipping(new_coordination):
-                continue
+            # if self.obs_clipping(new_coordination):
+            #     continue
             
             # creating the new node and adding it to the tree
             child=Node((node,action),new_coordination,data=copy.deepcopy(self.model.data))
             nodes.append(child)
 
             # check if we hit the goal
-            # if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
-            if self.model.success:
+            if self.neighbour(new_coordination[0:2],new_coordination[-2:]):
+            # if self.model.success:
                 goal=child
                 break
 
@@ -361,61 +361,62 @@ class Agent():
         return option        
     
     # main function
-    # def get_action(self, state,warmup,evaluation=False,data=None):
-        
-    #     if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
-            
-    #         exploration=True
-            
-    #         # we will output an option by RRT or a random action
-    #         self.model.data=data
-    #         option= self.RRT(state)
-
-    #         # record option length for distribution in the tree
-    #         length=len(option)
-
-    #         # to see the impact of rrt exploration 
-    #         #option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
-    #     else:            
-            
-    #         exploration =False
-    #         length=1
-
-    #         #get a primitive action from the network
-    #         state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-    #         action = self.actor.forward(state)
-    #         action = action.cpu().detach().numpy().flatten()
-    #         option=[action]
-        
-    #     # reverse the option
-    #     option.reverse()
-
-    #     # update the epsilon
-    #     if self.epsilon> minimum_exploration:
-    #         self.epsilon=self.epsilon*self.epsilon_decay
-
-    #     return option,exploration,length
-
-    # noisy action
     def get_action(self, state,warmup,evaluation=False,data=None):
         
-        #get a primitive action from the network
-        state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
-        action = self.actor.forward(state)
-        action = action.cpu().detach().numpy().flatten()
+        if random.uniform(0, 1)<self.epsilon and not warmup and not evaluation:
+            
+            exploration=True
+            
+            # we will output an option by RRT or a random action
+            self.model.data=data
+            # option= self.RRT(state)
+
+            # record option length for distribution in the tree
+            # length=len(option)
+
+            # to see the impact of rrt exploration 
+            option=[np.random.uniform(-self.action_range,self.action_range,size=(2,))]
+            length=1
+        else:            
+            
+            exploration =False
+            length=1
+
+            #get a primitive action from the network
+            state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+            action = self.actor.forward(state)
+            action = action.cpu().detach().numpy().flatten()
+            option=[action]
         
-        # adding noise to the action if it is not evaluation
-        if not evaluation:
-            noise=np.ones(4)
-            noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
-            noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
-            noise[2]=np.random.normal(0, noise_scale[2], size=1).clip(-self.action_range[1], self.action_range[1])
-            noise[3]=np.random.normal(0, noise_scale[3], size=1).clip(-self.action_range[1], self.action_range[1])
-            action=np.clip(action+noise,-self.action_range, self.action_range)
+        # reverse the option
+        option.reverse()
 
-        option=[action]
+        # update the epsilon
+        if self.epsilon> minimum_exploration:
+            self.epsilon=self.epsilon*self.epsilon_decay
 
-        return option,False,1
+        return option,exploration,length
+
+    # noisy action
+    # def get_action(self, state,warmup,evaluation=False,data=None):
+        
+    #     #get a primitive action from the network
+    #     state = Variable(torch.from_numpy(state).float().unsqueeze(0)).to(device)
+    #     action = self.actor.forward(state)
+    #     action = action.cpu().detach().numpy().flatten()
+        
+    #     # adding noise to the action if it is not evaluation
+    #     if not evaluation:
+    #         noise=np.ones(4)
+    #         noise[0]=np.random.normal(0, noise_scale[0], size=1).clip(-self.action_range[0], self.action_range[0])
+    #         noise[1]=np.random.normal(0, noise_scale[1], size=1).clip(-self.action_range[1], self.action_range[1])
+    #         noise[2]=np.random.normal(0, noise_scale[2], size=1).clip(-self.action_range[1], self.action_range[1])
+    #         noise[3]=np.random.normal(0, noise_scale[3], size=1).clip(-self.action_range[1], self.action_range[1])
+    #         action=np.clip(action+noise,-self.action_range, self.action_range)
+
+    #     option=[action]
+
+    #     return option,False,1
     
     
     def update(self, batch_size,update_number):
@@ -432,13 +433,12 @@ class Agent():
         done=torch.FloatTensor(np.array([1-i for i in done])).to(device)
         steps=torch.FloatTensor(np.array(steps)).to(device)
 
-        
         # Critic loss        
         Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states)
         next_Q = self.critic_target.forward(next_states, next_actions)
         if len(next_Q.shape)==3:
-            next_Q=torch.reshape(next_Q, (128,1,8))
+            next_Q=torch.reshape(next_Q, (len(steps),1,8))
         Qprime = rewards + (done* torch.pow(self.gamma,steps) *next_Q).detach()
         if len(Qprime.shape)==3:
             Qprime=Qprime.sum(axis=2)/torch.count_nonzero(Qprime, dim=2) 

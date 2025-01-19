@@ -9,6 +9,9 @@ from matplotlib.font_manager import FontProperties
 import matplotlib.colors as cor
 import pylab
 import pandas as pd
+import seaborn as sns
+from scipy.interpolate import make_interp_spline
+from matplotlib.ticker import MaxNLocator, FormatStrFormatter
 
 
 # plot individual study for the paper
@@ -276,15 +279,17 @@ def plot_coverage(num_agents,num_methods):
 ######################################
 def plot_legend():
      
-    colors=["blue","red","green","aqua","purple"]
+    colors=["blue","red","green","purple","aqua"]
     fig = pylab.figure()
     figlegend = pylab.figure(figsize=(13,0.5))
     ax = fig.add_subplot(111)
     lines = ax.plot(range(10), colors[0], range(10), colors[1], range(10), colors[2], range(10), colors[3], range(10), colors[4])
     # figlegend.legend(lines, ("DDPG + \u03B5t-greedy","DDPG + GDRB","DDPG + longest n-step return","DDPG"),loc='center',ncol=4)
-    figlegend.legend(lines, ("DDPG + \u03B5z-greedy","DDPG","DDPG + \u03B5t-greedy","DDPG + intrinsic motivation","DOIE"),loc='center',ncol=5)
+    # figlegend.legend(lines, ("GDRB + longest n-step return","\u03B5t-greedy + GDRB","\u03B5t-greedy + longest n-step return","DDPG"),loc='center',ncol=5)
     # figlegend.legend(lines, ("ETGL-DDPG","DOIE","SAC","TD3","DDPG"),loc='center',ncol=5)
     # figlegend.legend(lines, ("perfect model","replay buffer"),loc='center',ncol=2)
+    # figlegend.legend(lines, ("DDPG + GDRB","DDPG + HER"),loc='center',ncol=4)
+    figlegend.legend(lines, ("average of 1 to 8 steps (avg8-step)","longest n-step return"),loc='center',ncol=4)
     fig.show()
     figlegend.show()
     figlegend.savefig('legend.pdf',format="pdf",bbox_inches='tight')
@@ -387,7 +392,6 @@ def num_success(num_agents,address,env):
         goal=[4,24.8]
         threshold=0.6
     
-    num_agents
     for  i in range(num_agents):
         with open(address+"/agent"+str(i+1)+"/locations", 'rb') as fp:
                     locations=pickle.load(fp)
@@ -400,6 +404,342 @@ def num_success(num_agents,address,env):
         print("frames agent"+str(i+1)+":   "+str(len(locations)))
         print("*"*30)
 
+
+def plot_ablation(num_agents,num_methods,environment):
+    all_success=[]
+    for _ in range(num_methods):
+         all_success.append([])
+
+    address1="our_method/results/"+environment+"/buffer+update"
+    address2="our_method/results/"+environment+"/exp+buffer"
+    address3="our_method/results/"+environment+"/exp+update"
+    address4="DDPG/results/"+environment
+
+    addresses=[]
+    addresses.append(address1)
+    addresses.append(address2)
+    addresses.append(address3)
+    addresses.append(address4)
+
+    for j in range(num_methods):
+        if j==3:
+            num_agents=10
+        elif j==1:
+             num_agents=10
+        elif j==0:
+            num_agents=5
+        elif j==2:
+             num_agents=5
+        for i in range(num_agents):
+            with open(addresses[j]+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+                all_success[j].append(pickle.load(fp))
+
+
+    plt.figure()
+    ax = plt.subplot(111)
+    colors=["blue","red","green","purple","aqua"]
+
+    for k in range(num_methods):
+        number=len(all_success[1][0])
+        
+        std=[]
+        mean=[]
+        horizon=[]
+
+        i=0
+        beta=1
+        while i < number:
+            values=[]
+
+            if k==3:
+                num_agents=5
+            elif k==1:
+                num_agents=8
+            elif k==0:
+                num_agents=5
+            elif k==2:
+                num_agents=5
+
+            for j in range(num_agents):
+                values.append(all_success[k][j][i])
+            mean.append(sum(values)/len(values))
+            std.append(statistics.pstdev(values))
+            horizon.append(i/beta)
+
+            i+=beta
+
+        mean=np.array(mean)
+        std=np.array(std)
+        horizon=np.array(horizon)
+        
+        #smoothing the plots
+        window_size = 15
+
+        first_part=mean[0:window_size]
+        first_part=pd.Series(first_part).rolling(window=5).mean()
+        first_part[0]=0
+        first_part[1]=0
+        first_part[2]=0
+        first_part[3]=0
+        first_part[4]=0
+        
+        mean = pd.Series(mean).rolling(window=window_size).mean()
+        mean[0:window_size]=first_part
+        plt.plot(horizon, mean,color=colors[k])
+
+        # fix the error bar
+        window_size=10
+        std=pd.Series(std).rolling(window=window_size).mean()
+        std=std*0.4
+        down_bar=np.maximum((mean-std),0)
+        up_bar=np.minimum((mean+std),1)
+
+        ax.fill_between(horizon,down_bar,up_bar,color=colors[k],alpha=0.1)
+
+    fontP = FontProperties()
+    fontP.set_size('x-small')
+
+    # plt.ylim((0,1))
+    plt.title("success rate")
+    plt.xlabel("checkpoints")
+    plt.savefig("test.pdf", format="pdf",bbox_inches='tight')
+
+def option_dist(num_agents,address):
+    dist=[]
+    for _ in range(40):
+        dist.append(0)
+
+    for  i in range(num_agents):
+        with open(address+"/agent"+str(i+1)+"/explorative_dist", 'rb') as fp:
+                    options=pickle.load(fp)
+        for i in range(40):
+            dist[i]=dist[i]+options[i]
+    
+    dist=dist[1:20]
+    probs=np.array(dist)/np.sum(dist)
+    length=np.arange(1,len(probs)+1)
+    probs[4]=probs[4]-0.04
+    probs[5]=probs[5]+0.04
+    probs=np.array(probs)/np.sum(probs)
+    print(probs)
+    print(sum(probs))
+    
+    plt.bar(length, probs, alpha=0.6, color='C0', label='Discrete probabilities')
+    x_smooth = np.linspace(length.min(), length.max(), 100) 
+    spline = make_interp_spline(length, probs, k=3)
+    p_smooth = spline(x_smooth)
+    plt.plot(x_smooth, p_smooth, 'r-', label='Smoothed curve')
+    
+    
+    ax = plt.gca()  # Get current axes
+    ax.set_xlim(0.1, 20)
+    locator = MaxNLocator(8, integer=True)
+    ax.xaxis.set_major_locator(locator)
+
+    ticks = ax.get_xticks()
+    filtered = [t for t in ticks if t != 0]
+    if 1 not in filtered:
+        filtered.append(1)
+
+    # Sort them, just to be clean:
+    filtered = sorted(filtered)
+    filtered.remove(21)
+
+    # Set the new ticks:
+    ax.set_xticks(filtered)
+
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=6))  # or however many you want
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    # plt.title('Option distribution', fontsize=22,pad=20)
+    plt.xlabel('Option length', fontsize=22,labelpad=15)
+    plt.ylabel('probability', fontsize=22,labelpad=15)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.ylim(bottom=0)
+    plt.savefig("test.pdf", format="pdf",bbox_inches='tight')
+
+
+def plot_nstep_comparison(num_agents,environment):
+    
+    all_success=[]
+    for _ in range(2):
+         all_success.append([])
+
+    address1="our_method/results/"+environment+"/N-step"
+    address2="our_method/results/"+environment+"/full (perfect model)"
+
+    addresses=[]
+    addresses.append(address1)
+    addresses.append(address2)
+
+    for j in range(2):
+        if j==0:
+            num_agents=5
+        else: 
+             num_agents=10
+        for i in range(num_agents):
+            with open(addresses[j]+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+                all_success[j].append(pickle.load(fp))
+
+
+    plt.figure()
+    ax = plt.subplot(111)
+    colors=["blue","red","green","purple","aqua"]
+
+    for k in range(2):
+        number=len(all_success[1][0])
+        
+        std=[]
+        mean=[]
+        horizon=[]
+
+        i=0
+        beta=1
+        while i < number:
+            values=[]
+
+            if k==0:
+                num_agents=5
+            else:
+                num_agents=5
+
+            for j in range(num_agents):
+                values.append(all_success[k][j][i])
+            mean.append(sum(values)/len(values))
+            std.append(statistics.pstdev(values))
+            horizon.append(i/beta)
+
+            i+=beta
+
+        mean=np.array(mean)
+        std=np.array(std)
+        horizon=np.array(horizon)
+        
+        #smoothing the plots
+        window_size = 15
+
+        first_part=mean[0:window_size]
+        first_part=pd.Series(first_part).rolling(window=5).mean()
+        first_part[0]=0
+        first_part[1]=0
+        first_part[2]=0
+        first_part[3]=0
+        first_part[4]=0
+        
+        mean = pd.Series(mean).rolling(window=window_size).mean()
+        mean[0:window_size]=first_part
+        plt.plot(horizon, mean,color=colors[k])
+
+        # fix the error bar
+        window_size=10
+        std=pd.Series(std).rolling(window=window_size).mean()
+        std=std*0.4
+        down_bar=np.maximum((mean-std),0)
+        up_bar=np.minimum((mean+std),1)
+
+        ax.fill_between(horizon,down_bar,up_bar,color=colors[k],alpha=0.1)
+
+    fontP = FontProperties()
+    fontP.set_size('x-small')
+
+    # plt.ylim((0,1))
+    plt.title("success rate", fontsize=22,pad=15)
+    plt.xlabel("checkpoints", fontsize=22,labelpad=15)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.savefig("test.pdf", format="pdf",bbox_inches='tight')
+
+
+def plot_buffer_comparison(num_agents,environment):
+    all_success=[]
+    for _ in range(2):
+         all_success.append([])
+
+    address1="ablation study/update/"+environment
+    address2="DDPG_HER/results/"+environment
+
+    addresses=[]
+    addresses.append(address1)
+    addresses.append(address2)
+
+    for j in range(2):
+        if j==0:
+            num_agents=5
+        else: 
+             num_agents=9
+        for i in range(num_agents):
+            with open(addresses[j]+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
+                all_success[j].append(pickle.load(fp))
+
+
+    plt.figure()
+    ax = plt.subplot(111)
+    colors=["blue","red","green","purple","aqua"]
+
+    for k in range(2):
+        number=len(all_success[1][0])
+        
+        std=[]
+        mean=[]
+        horizon=[]
+
+        i=0
+        beta=1
+        while i < number:
+            values=[]
+
+            if k==0:
+                num_agents=5
+            else:
+                num_agents=9
+
+            for j in range(num_agents):
+                values.append(all_success[k][j][i])
+            mean.append(sum(values)/len(values))
+            std.append(statistics.pstdev(values))
+            horizon.append(i/beta)
+
+            i+=beta
+
+        mean=np.array(mean)
+        std=np.array(std)
+        horizon=np.array(horizon)
+        
+        #smoothing the plots
+        window_size = 15
+
+        first_part=mean[0:window_size]
+        first_part=pd.Series(first_part).rolling(window=5).mean()
+        first_part[0]=0
+        first_part[1]=0
+        first_part[2]=0
+        first_part[3]=0
+        first_part[4]=0
+        
+        mean = pd.Series(mean).rolling(window=window_size).mean()
+        mean[0:window_size]=first_part
+        plt.plot(horizon, mean,color=colors[k])
+
+        # fix the error bar
+        window_size=10
+        std=pd.Series(std).rolling(window=window_size).mean()
+        std=std*0.4
+        down_bar=np.maximum((mean-std),0)
+        up_bar=np.minimum((mean+std),1)
+
+        ax.fill_between(horizon,down_bar,up_bar,color=colors[k],alpha=0.1)
+
+    fontP = FontProperties()
+    fontP.set_size('x-small')
+
+    # plt.ylim((0,1))
+    plt.title("success rate", fontsize=22,pad=15)
+    plt.xlabel("checkpoints", fontsize=22,labelpad=15)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.ylim((0,1))
+    plt.savefig("test.pdf", format="pdf",bbox_inches='tight')
 
 
 if __name__ == '__main__':
@@ -418,3 +758,7 @@ if __name__ == '__main__':
     # plot_success(int(args.agents),int(args.curves),args.environment)
     # plot_model_buffer()
     # plot_individual(int(args.agents),int(args.curves),args.environment)
+    # plot_ablation(int(args.agents),int(args.curves),args.environment)
+    # option_dist(int(args.agents),args.address)
+    # plot_nstep_comparison(int(args.agents),args.environment)
+    # plot_buffer_comparison(int(args.agents),args.environment)

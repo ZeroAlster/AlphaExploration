@@ -1,5 +1,6 @@
 import sys
 sys.path.append("/home/futuhi/AlphaExploration")
+import math
 import argparse
 from general.maze import Env
 import numpy as np
@@ -25,13 +26,13 @@ from PIL import Image
 
 #hyper params
 ######################################
-max_frames  = 2e6
+max_frames  = 6e6
 max_steps   = 100
-batch_size  = 512
-num_updates=250
+batch_size  = 128
+num_updates=40
 checkpoints_interval=10000
 evaluation_attempts=10
-warm_up=500
+warm_up=20000
 ######################################
 
 
@@ -41,11 +42,13 @@ def evaluation(agent,env):
     for _ in range(evaluation_attempts):
         obs = env.reset()
         done=False
-        while (not done) and (not env.success):
+        while not done:
             action,_,_ = agent.get_action(obs,warmup=False,evaluation=True)
             obs,_,done,_= env.step(action[0])
         
-        if env.success:
+        # if env.success:
+        #     success+=1
+        if agent.neighbour(obs[0:2],obs[-2:]):
             success+=1
     
     return success/evaluation_attempts
@@ -168,7 +171,7 @@ def train(agent,env,address,environment,test_env):
         done=False
         terminal=state
         
-        while (not done) and (not env.success):
+        while (not done):
             option,_,_ = agent.get_action(state,warmup=True)
             for action in option:
                 next_state, reward, done, _ = env.step(action)
@@ -196,11 +199,11 @@ def train(agent,env,address,environment,test_env):
                 terminal=state
 
                 # check if episode is done
-                if env.success:
-                    success_num+=1
-                    save_to_buffer(agent,episode_memory,short=True)
-                    save_to_buffer(agent,episode_memory)
-                    break
+                # if env.success:
+                #     success_num+=1
+                #     save_to_buffer(agent,episode_memory,short=True)
+                #     save_to_buffer(agent,episode_memory)
+                #     break
     
                 if done:
                     save_to_buffer(agent,episode_memory)
@@ -220,8 +223,8 @@ def train(agent,env,address,environment,test_env):
         episode_memory=[]
         terminal=state
 
-        while (not done) and (not env.success):
-            option,e,l = agent.get_action(state,warmup=False,data=env.data)            
+        while (not done):
+            option,e,l = agent.get_action(state,warmup=False,data=None)            
             
             # record explorative option length
             if e:
@@ -264,8 +267,8 @@ def train(agent,env,address,environment,test_env):
                         
                 
                 # adding successful trajectory to the short memory
-                # if agent.neighbour(next_state[0:2],next_state[-2:])
-                if env.success:
+                if agent.neighbour(next_state[0:2],next_state[-2:]):
+                # if env.success:
                     success_num+=1
                     save_to_buffer(agent,episode_memory,short=True)
                     save_to_buffer(agent,episode_memory)
@@ -280,7 +283,7 @@ def train(agent,env,address,environment,test_env):
         destinations.append([terminal,frame])
 
         # set number of updates from short memory (off for one-buffer settings)
-        # agent.short_memory_updates=int((frame/max_frames)*num_updates)
+        agent.short_memory_updates=int((frame/max_frames)*num_updates)
 
         # update after each episode when the warmup is done
         for i in range(num_updates):
@@ -309,14 +312,14 @@ def main(address,environment,model_avb,seed):
             density_estimator=SEstimator(1,20,20,[-2,-2])
             threshold=0.6
 
-            os.environ["MUJOCO_GL"]="egl"
-            env.reset()
-            env.reset()
-            img = env.render(mode='rgb_array')
-            plt.imshow(img)
-            plt.axis('off')
-            plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
-            exit()
+            # os.environ["MUJOCO_GL"]="egl"
+            # env.reset()
+            # env.reset()
+            # img = env.render(mode='rgb_array')
+            # plt.imshow(img)
+            # plt.axis('off')
+            # plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
+            # exit()
 
 
         elif environment=="maze":
@@ -327,6 +330,7 @@ def main(address,environment,model_avb,seed):
             action_range=np.array((env.action_range,env.action_range))
             density_estimator=SEstimator(1,10,10,[-0.5,-0.5])
             threshold=0.15
+
             # import matplotlib.patches as patches
             # # plot the map first
             # _, ax = plt.subplots(1, 1, figsize=(5, 4))
@@ -349,14 +353,14 @@ def main(address,environment,model_avb,seed):
             density_estimator=SEstimator(1,28,28,[-14,-2])
             threshold=0.6
 
-            os.environ["MUJOCO_GL"]="egl"
-            env.reset()
-            env.reset()
-            img = env.render(mode='rgb_array')
-            plt.imshow(img)
-            plt.axis('off')
-            plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
-            exit()
+            # os.environ["MUJOCO_GL"]="egl"
+            # env.reset()
+            # env.reset()
+            # img = env.render(mode='rgb_array')
+            # plt.imshow(img)
+            # plt.axis('off')
+            # plt.savefig('environment_image.pdf', format='pdf', bbox_inches='tight', dpi=300)
+            # exit()
 
         else:
             raise ValueError("The environment does not exist")

@@ -351,6 +351,8 @@ class Env(gymnasium.Env):
 
         # maze parameters
         self.n=n
+        self.reward_range = (-1, 10)
+        self.data=None
         self.goal_achievement=0
         self._mazes = mazes_dict
         self.maze_type = maze_type.lower()
