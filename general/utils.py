@@ -118,9 +118,8 @@ def plot_success(num_agents,num_methods,environment):
     for _ in range(num_methods):
          all_success.append([])
 
-    address1="our_method/results/"+environment
+    address1="our_method/results/"+environment+"/full (perfect model)"
     address2="DOIE/"+environment
-    # address2="our_method/results/"+environment+"/full (replay buffer)"
     address3="PG-baselines/SAC/"+environment
     address4="PG-baselines/TD3/"+environment
     address5="DDPG/results/"+environment
@@ -134,8 +133,8 @@ def plot_success(num_agents,num_methods,environment):
 
     for j in range(num_methods):
         if j==1:
-            for i in range(num_agents):
-                with open(addresses[j]+"/seed_"+str(i), 'rb') as fp:
+            for i in range(7):
+                with open(addresses[j]+"/success/seed_"+str(i), 'rb') as fp:
                     all_success[j].append(pickle.load(fp))
         else:
             for i in range(num_agents):
@@ -158,6 +157,10 @@ def plot_success(num_agents,num_methods,environment):
         beta=1
         while i < number:
             values=[]
+            if k==1:
+                num_agents=7
+            else:
+                num_agents=5
             for j in range(num_agents):
                 values.append(all_success[k][j][i])
             mean.append(sum(values)/len(values))
@@ -208,11 +211,11 @@ def plot_coverage(num_agents,num_methods):
     explorations3=[]
     explorations4=[]
     explorations5=[]
-    address1="DDPG_ICM/results/mujoco"
-    address2="DDPG_temporal/results/mujoco/full"
-    address3="DDPG/results/mujoco"
-    address4="our_method/results/mujoco/full (perfect model)"
-    address5="DOIE/mujoco/exploration/"
+    address1="DDPG_ICM/results/push"
+    address2="DDPG_temporal/results/push/full"
+    address3="DDPG/results/push"
+    address4="our_method/results/push/full (replay buffer)"
+    address5="DOIE/push/exploration/"
 
     for i in range(num_agents):
         with open(address1+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
@@ -223,7 +226,7 @@ def plot_coverage(num_agents,num_methods):
     for i in range(num_agents):
         with open(address3+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
                 explorations3.append(pickle.load(fp))
-    for i in range(num_agents):
+    for i in range(10):
         with open(address4+"/agent"+str(i+1)+"/env_coverage", 'rb') as fp:
                 explorations4.append(pickle.load(fp))
     for i in range(num_agents):
@@ -248,11 +251,15 @@ def plot_coverage(num_agents,num_methods):
         horizon=np.zeros((1,number))
         for i in range(number):
             values=[]
+            if k==3:
+                num_agents=10
+            else:
+                num_agents=5
             for j in range(num_agents):
                 # for mujoco
-                values.append(explorations[k][j][i]*(25/17))
+                # values.append(explorations[k][j][i]*(25/17))
                 # for maze
-                # values.append(explorations[k][j][i])
+                values.append(explorations[k][j][i])
                 # for push
                 # values.append(explorations[k][j][i]*(1.09))
             mean[0][i]=sum(values)/len(values)
@@ -267,9 +274,10 @@ def plot_coverage(num_agents,num_methods):
 
         plt.fill_between(horizon[0,:],down_bar,up_bar,color=colors[k],alpha=0.15)
 
-    plt.title("environment coverage")
-    plt.xlabel("checkpoints")
-    plt.yticks([0,0.2,0.4,0.6,0.8,1])
+    plt.title("environment coverage",fontsize=22,pad=15)
+    plt.xlabel("checkpoints",fontsize=22,labelpad=15)
+    plt.yticks([0,0.2,0.4,0.6,0.8,1],fontsize=16)
+    plt.xticks(fontsize=16)
     plt.gca().set_ylim(top=1.05)
     # ax.legend(loc="lower right")
     plt.savefig('test.pdf',format="pdf",bbox_inches='tight')
@@ -300,14 +308,14 @@ def plot_model_buffer():
     for _ in range(2):
          all_success.append([])
 
-    address1="our_method/results/maze/update/avg8-step-TD/"
-    address2="our_method/results/maze/full (perfect model)/"
+    address1="our_method/results/push/update/avg8-step-TD/"
+    address2="our_method/results/push/full (perfect model)/"
 
     addresses=[]
     addresses.append(address1)
     addresses.append(address2)
 
-    for i in range(5):
+    for i in range(7):
         with open(addresses[0]+"/agent"+str(i+1)+"/success_rates", 'rb') as fp:
             all_success[0].append(pickle.load(fp))
     
@@ -335,7 +343,7 @@ def plot_model_buffer():
 
             num_agents=5
             if(k==0):
-                num_agents=5
+                num_agents=7
 
             for j in range(num_agents):
                 values.append(all_success[k][j][i])
@@ -754,9 +762,9 @@ if __name__ == '__main__':
     
     # num_success(int(args.agents),args.address,args.environment)
     # plot_coverage(int(args.agents),int(args.curves))
-    plot_legend()
+    # plot_legend()
     # plot_success(int(args.agents),int(args.curves),args.environment)
-    # plot_model_buffer()
+    plot_model_buffer()
     # plot_individual(int(args.agents),int(args.curves),args.environment)
     # plot_ablation(int(args.agents),int(args.curves),args.environment)
     # option_dist(int(args.agents),args.address)
